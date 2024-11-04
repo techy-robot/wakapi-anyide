@@ -17,7 +17,7 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 ## Quickstart guide
 
-- **Set your IDE to autosave as quickly as possible.** This is how wakapi-anyide is able to track your coding time. Ideally, something like 100ms, so it saves as you type.
+- **Set your IDE to autosave as quickly as possible.** This is how wakapi-anyide is able to track your coding time. Ideally, something like a second, so it saves as you type.
 
 - Install `wakapi-anyide` with your favourite Python package manager
 
