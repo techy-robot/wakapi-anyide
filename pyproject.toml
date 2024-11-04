@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "wakapi_anyide"
+version = "0.1.0"
+description = ""
+authors = ["Sarah"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+aiohttp = "^3.10.10"
+asyncinotify = "^4.2.0"
+typer-slim = "^0.12.5"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
