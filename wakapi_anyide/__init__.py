@@ -111,8 +111,13 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
                 changed_files[event.filename] = event
             except TimeoutError:
                 break
-        
+                
         next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
+                
+        if len(changed_files) == 0:
+            print(f"No changes detected.")
+            continue
+        
         async with cache_lock as cache:
             changed_events = await asyncmap(process_file_changes(cache), changed_files.values())
         changed_files.clear()
