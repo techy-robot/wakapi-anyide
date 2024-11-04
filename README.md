@@ -8,7 +8,7 @@ Log your coding time against any WakaTime-like server.
 > wakapi-anyide only supports Linux. This is due to it using inotify.
 
 > [!IMPORTANT]
-> wakapi-anyide is still in development.
+> wakapi-anyide is still in development. It is not feature complete.
 
 ## Alternatives
 You should try use an [editor extension](https://wakatime.com/plugins) over wakapi-anyide if you can.
@@ -40,11 +40,11 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 ## What wakapi-anyide sends
 wakapi-anyide tells the WakaTime server:
-- that you are using wakapi-anyide
-- the relative path of the files you change, e.g "./wakatime_anyide/__init__.py"
+- that you are using wakapi-anyide (`wakatime/unset (none-none-none) wakapi-anyide-wakatime/unset`)
+- the relative path of the files you change (`./wakatime_anyide/__init__.py`)
 - the estimated time you have spent
 - your estimated cursor position over time
-- the estimated language of any files you edit
+- the estimated language of any files you edit (`py`, `Makefile`)
 - the amount of lines changed
 - the branch you are editing if you use Git
 - any information you specified in the project section of `wak.toml`
