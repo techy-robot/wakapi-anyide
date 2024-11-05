@@ -8,11 +8,12 @@ from pathlib import Path
 
 from wakapi_anyide.helpers.ini import IniConfigSettingsSource
 
+
 class Settings(BaseModel):
     api_key: str | None = None
     api_key_vault_cmd: str | None = None
     api_url: str = "https://api.wakatime.com/api/v1"
-    hostname: str = "wakapi-anyide"
+    hostname: str | None = None
     heartbeat_rate_limit_seconds: int = 120
     
     @root_validator(pre=True)
@@ -24,6 +25,7 @@ class Settings(BaseModel):
             raise ValueError('One of api_key or api_key_vault_cmd must be set.')
         
         return values
+
 
 class WakatimeConfig(BaseSettings):
     model_config = SettingsConfigDict(

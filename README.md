@@ -6,9 +6,10 @@ Log your coding time against any WakaTime-like server.
 
 > [!IMPORTANT]
 > wakapi-anyide only supports Linux. This is due to it using inotify.
+> This may change in the future.
 
 > [!IMPORTANT]
-> wakapi-anyide is still in development. It is not feature complete.
+> wakapi-anyide is still in development. Some things probably won't work.
 
 ## Alternatives
 
@@ -36,7 +37,7 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
   exclude_files = [".gitignore"]            # files whose contents will be used to exclude other files from tracking
   
   [project]
-  name = "wakapi-anyide"                  # your project name
+  name = "wakapi-anyide"                    # your project name
   ```
 
 - Run `wakapi-anyide test` in the same directory you have `wak.toml` in, and start coding for a bit.
@@ -49,7 +50,8 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 wakapi-anyide tells the WakaTime server:
 
-- that you are using wakapi-anyide (`wakatime/unset (none-none-none) wakapi-anyide-wakatime/unset`)
+- your OS that you are using wakapi-anyide (`wakatime/unset (Linux-none-none) wakapi-anyide-wakatime/unset`)
+- an anonymised hostname based off of your computer's name (`anonymised machine 749f8c4e`)
 - the relative path of the files you change (`./wakatime_anyide/__init__.py`)
 - the estimated time you have spent
 - your estimated cursor position over time
@@ -66,7 +68,10 @@ Additionally, the WakaTime server will be able to see:
 Every website you visit can see this information.
 
 wakapi-anyide does not send:
-- any information about your system, like your username
+
+- any information about your system not listed above, like your username
+- file content
+- filenames outside of those included in your `wak.toml`
 
 For security, wakapi-anyide does not use wakatime-cli.
 
@@ -86,7 +91,7 @@ Only these configuration values are supported:
 | api_key           | Your WakaTime API key.                                                                               | _string_ |                                   |
 | api_key_vault_cmd | A command to get your api key. Shell syntax is not supported, use `sh -c "<your command>"` for that. | _string_ |                                   |
 | api_url           | The WakaTime API base url.                                                                           | _string_ | <https://api.wakatime.com/api/v1> |
-| hostname          | Optional name of local machine.                                                                      | _string_ | wakapi-anyide                   |
+| hostname          | Optional name of local machine.                                                                      | _string_ | (an anonymised hostname)          |
 
 All other configuration values are silently ignored.
 

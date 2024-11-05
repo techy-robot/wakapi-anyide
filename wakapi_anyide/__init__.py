@@ -13,13 +13,13 @@ from wakapi_anyide.helpers.mutex import MutexDict
 from wakapi_anyide.helpers.asynctools import asyncmap
 from aiofiles import open
 from functools import partial
+from os import uname
+from hashlib import sha256
 import base64
 import re
 import time
 
 from wakapi_anyide.models.environment import Environment
-
-USER_AGENT = "wakatime/unset (none-none-none) wakapi-anyide-wakatime/unset"
 
 
 @dataclass
@@ -125,13 +125,16 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
         print(f"Change summary:")
         for event in changed_events:
             print(f"{event.filename:20} at {event.cursor[0]}:{event.cursor[1]} +{event.lines_added} -{event.lines_removed}")
-            
+        
+        host = uname()
+        user_agent = f"wakatime/unset ({host.sysname}-none-none) wakapi-anyide-wakatime/unset"
+        
         heartbeats = [{
             "entity": event.filename,
             "type": "file",
             "category": "coding",
             "time": event.time,
-            "project": "wakatime-anyide",
+            "project": env.project.project.name,
             "language": Path(event.filename).suffix.replace('.', '') or Path(event.filename).name,
             "lines": event.lines,
             "line_additions": event.lines_added,
@@ -140,8 +143,9 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             "cursorpos": event.cursor[1],
             "is_write": True,
             "editor": "wakapi-anyide",
-            "operating_system": "wakapi-anyide",
-            "user_agent": USER_AGENT
+            "machine": env.config.settings.hostname or f"anonymised machine {sha256(host.nodename.encode()).hexdigest()[:8]}",
+            "operating_system": host.sysname,
+            "user_agent": user_agent
         } for event in changed_events]
         
         response: ClientResponse
@@ -154,7 +158,7 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
         for i in range(3):
             print(f"Sending heartbeat (attempt {i+1})")
             async with request("POST", f"{env.config.settings.api_url}/users/current/heartbeats.bulk", json=heartbeats, headers={
-                "User-Agent": USER_AGENT,
+                "User-Agent": user_agent,
                 "Authorization": f"Basic {base64.b64encode(env.config.settings.api_key.encode()).decode()}"
             }) as response:
                 if response.status == 201:
