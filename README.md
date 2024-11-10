@@ -5,8 +5,8 @@ Log your coding time against any WakaTime-like server.
 > Teenager? Check out [High Seas](https://highseas.hackclub.com/)!
 
 > [!IMPORTANT]
-> wakapi-anyide only supports Linux. This is due to it using inotify.
-> This may change in the future.
+> wakapi-anyide has only been tested on Linux and Windows.
+> Please report any tracking bugs!
 
 > [!IMPORTANT]
 > wakapi-anyide is still in development. Some things probably won't work.

@@ -8,3 +8,7 @@ __pycache__
 # Maturin
 
 *.abi3.so
+
+# Build output
+
+/dist
