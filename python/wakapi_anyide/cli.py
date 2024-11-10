@@ -240,6 +240,9 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
         for event in ev_list:
             resolved_path = normalise(Path(event.target))
             
+            if not is_included(resolved_path, included_paths_re, excluded_paths_re):
+                continue
+            
             match event.kind:
                 case WatchEventType.Delete:
                     if cache_lock.read().get(resolved_path) is None:
