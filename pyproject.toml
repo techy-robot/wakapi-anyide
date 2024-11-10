@@ -5,6 +5,7 @@ package-mode = false
 python = "^3.12"
 aiohttp = "^3.10.10"
 typer-slim = "^0.12.5"
+aiofiles = "^24.1.0"
 
 [tool.poetry.group.dev.dependencies]
 maturin = "^1.7.4"
