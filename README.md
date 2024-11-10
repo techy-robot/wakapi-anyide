@@ -5,7 +5,7 @@ Log your coding time against any WakaTime-like server.
 > Teenager? Check out [High Seas](https://highseas.hackclub.com/)!
 
 > [!IMPORTANT]
-> wakapi-anyide has only been tested on Linux and Windows, and is still in development.
+> wakapi-anyide is still in development.
 > Please report any tracking bugs!
 
 ## Alternatives
@@ -14,26 +14,34 @@ You should try use an [editor extension](https://wakatime.com/plugins) over waka
 If you don't need precise coding metrics, use the [WakaTime app](https://wakatime.com/linux) instead. (Not for High Seas!)
 
 ## Quickstart guide
+These instructions are best run in an existing project.
+
+- Create a `.wakatime.cfg` file if you don't already have one.
+  If you're doing High Seas, this is explained in the Signpost (click "View instructions for all platforms" and scroll down).
 
 - **Set your IDE to autosave as quickly as possible.**
   This is how wakapi-anyide is able to track your coding time. Ideally, something like a second, so it saves as you type.
   However, anything under your editor timeout preference in your WakaTime settings is fine.
-  For High Seas, it must be under two minutes.
+  For High Seas, it **must** be under two minutes.
 
-- Install `wakapi-anyide` with your favourite Python package manager
+- Install `wakapi-anyide` with your favourite Python package manager (try `pipx install wakapi-anyide`)
 
-- Run `wakapi-anyide setup` and follow the instructions
+- Run `wakapi-anyide setup` and follow the instructions.
+  The **included paths** are the paths that wakapi-anyide will watch for changes.  
+  The **excluded paths** are the paths that wakapi-anyide will ignore.
+  You should put things like generated/compiled code or packages there (ie `*.o`, `/node_modules`).
+  By default, if you have a `.gitignore` then it will ignore every file listed in it.
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.3.1
+  # https://github.com/iamawatermelo/wakapi-anyide v0.3.2
   
   [wakapi-anyide]
   version = 1  # don't change this
   
   [files]
-  include = ["/python/**/*.py", "/*.toml"]  # files to include in tracking
-  exclude = ["/.venv"]  # files to exclude in tracking
+  include = ["/python/**/*.py", "/*.toml"]  # files to include in tracking (ie /src)
+  exclude = ["/.venv"]  # files to exclude in tracking (ie /node_modules)
   exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
   exclude_binary_files = true
   
@@ -41,8 +49,9 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
   name = "wakapi-anyide"  # your project name
   ```
 
-- Run `wakapi-anyide test` in the same directory you have `wak.toml` in, and start coding for a bit.
-  Ensure that wakapi-anyide is not tracking any generated files.
+- Run `wakapi-anyide test` in the same directory you have `wak.toml` in.
+  Ensure that wakapi-anyide is not tracking any generated files by reading through the paths it has cached.
+  If there are no generated files in the cached paths, you're good to go.
 
 - Run `wakapi-anyide track` to actually track your progress.
   You must run this every time.
@@ -87,12 +96,13 @@ Only these configuration values are supported:
 
 #### [settings]
 
-| option            | description                                                                                          | type     | default value                     |
-| ----------------- | ---------------------------------------------------------------------------------------------------- | -------- | --------------------------------- |
-| api_key           | Your WakaTime API key.                                                                               | _string_ |                                   |
-| api_key_vault_cmd | A command to get your api key. Shell syntax is not supported, use `sh -c "<your command>"` for that. | _string_ |                                   |
-| api_url           | The WakaTime API base url.                                                                           | _string_ | <https://api.wakatime.com/api/v1> |
-| hostname          | Optional name of local machine.                                                                      | _string_ | (an anonymised hostname)          |
+| option                        | description                                                                                          | type     | default value                     |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------- | -------- | --------------------------------- |
+| api_key                       | Your WakaTime API key.                                                                               | _string_ |                                   |
+| api_key_vault_cmd             | A command to get your api key. Shell syntax is not supported, use `sh -c "<your command>"` for that. | _string_ |                                   |
+| api_url                       | The WakaTime API base url.                                                                           | _string_ | <https://api.wakatime.com/api/v1> |
+| hostname                      | Optional name of local machine.                                                                      | _string_ | (an anonymised hostname)          |
+| heartbeat_rate_limit_seconds  | How often to send heartbeats, in seconds.                                                            | _int_    | 120                               |
 
 All other configuration values are silently ignored.
 

@@ -56,7 +56,9 @@ def setup():
     project_name = typer.prompt("What's your project name?", default=Path("./").absolute().name)
     
     included_paths = list()
-    if typer.confirm("Would you like to add include paths?"):
+    if typer.confirm("Would you like to watch all files in the directory?", default=True):
+        included_paths.append("*")
+    elif typer.confirm("Would you like to add include paths?"):
         while True:
             included_paths.append(typer.prompt("Please enter a path to include in gitignore format (e.g /src)"))
             
