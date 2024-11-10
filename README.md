@@ -26,7 +26,7 @@ These instructions are best run in an existing project.
 
 - Install `wakapi-anyide` with your favourite Python package manager (try `pipx install wakapi-anyide`)
 
-- Run `wakapi-anyide setup` and follow the instructions.
+- Run `wakapi-anyide setup` and follow the instructions.  
   The **included paths** are the paths that wakapi-anyide will watch for changes.  
   The **excluded paths** are the paths that wakapi-anyide will ignore.
   You should put things like generated/compiled code or packages there (ie `*.o`, `/node_modules`).
