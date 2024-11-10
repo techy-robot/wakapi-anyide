@@ -69,6 +69,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
+        name: python
         with:
           python-version: '>=3.12 <4'
       - name: Set up pip cache
@@ -76,10 +77,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
-          restore-keys: ${{ runner.os }}-pip-
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}-${{ steps.python.outputs.python-version }}
+          restore-keys: ${{ runner.os }}-pip-${{ steps.python.outputs.python-version }}
       - name: Install Hatch
-        run: pipx install hatch
+        run: pipx install hatch --version ${{ steps.python.outputs.python-version }}
       - name: Build
         run: hatch build
       - name: Upload wheels
@@ -100,6 +101,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
+        name: python
         with:
           python-version: '>=3.12 <4'
       - name: Set up pip cache
@@ -107,10 +109,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
-          restore-keys: ${{ runner.os }}-pip-
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}-${{ steps.python.outputs.python-version }}
+          restore-keys: ${{ runner.os }}-pip-${{ steps.python.outputs.python-version }}
       - name: Install Hatch
-        run: pipx install hatch
+        run: pipx install hatch --version ${{ steps.python.outputs.python-version }}
       - name: Build
         run: hatch build
       - name: Upload wheels
@@ -131,6 +133,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
+        name: python
         with:
           python-version: '>=3.12 <4'
       - name: Set up pip cache
@@ -138,10 +141,10 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
-          restore-keys: ${{ runner.os }}-pip-
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}-${{ steps.python.outputs.python-version }}
+          restore-keys: ${{ runner.os }}-pip-${{ steps.python.outputs.python-version }}
       - name: Install Hatch
-        run: pipx install hatch
+        run: pipx install hatch --version ${{ steps.python.outputs.python-version }}
       - name: Build
         run: hatch build
       - name: Upload wheels
