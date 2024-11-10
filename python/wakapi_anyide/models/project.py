@@ -1,18 +1,26 @@
-from typing import List, Literal
+from typing import List
+from typing import Literal
+
 from pydantic import BaseModel
-from pydantic_settings import BaseSettings, TomlConfigSettingsSource
+from pydantic_settings import BaseSettings
+from pydantic_settings import TomlConfigSettingsSource
 from pydantic_settings.main import SettingsConfigDict
+
 
 class ProjectMeta(BaseModel):
     version: Literal[1]
+
 
 class ProjectFiles(BaseModel):
     include: List[str]
     exclude: List[str]
     exclude_files: List[str]
-    
+    exclude_binary_files: bool = True
+
+
 class ProjectDescription(BaseModel):
     name: str
+
 
 class Project(BaseSettings):
     model_config = SettingsConfigDict(toml_file="wak.toml")

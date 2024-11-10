@@ -1,26 +1,46 @@
-[tool.poetry]
-name = "wakapi_anyide"
-version = "0.1.0"
-description = ""
-authors = ["Sarah"]
+[project]
+name = "wakapi-anyide"
+version = "0.4.1"
+description = "Time tracking for any IDE with WakaTime-like servers"
 readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Sarah C"}
+]
+maintainers = [
+    {name = "Sarah C"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: Public Domain",
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: CPython"
+]
+dependencies = [
+    "aiohttp~=3.10.10",
+    "typer-slim~=0.12.5",
+    "aiofiles~=24.1.0",
+    "pydantic~=2.9.2",
+    "pydantic-settings~=2.6.1",
+    "pathspec~=0.12.1"
+]
 
-[tool.poetry.dependencies]
-python = "^3.12"
-aiohttp = "^3.10.10"
-asyncinotify = "^4.2.0"
-typer-slim = "^0.12.5"
-aiofiles = "^24.1.0"
-pydantic = "^v2.9.2"
-pydantic-settings = "^2.6.1"
+[project.scripts]
+wakapi-anyide = "wakapi_anyide.__main__:app"
 
-[tool.poetry.scripts]
-wakapi-anyide = 'wakapi_anyide.__main__:app()'
+[tool.maturin]
+bindings = "pyo3"
+python-source = "python"
+module-name = "wakapi_anyide._watch"
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
