@@ -19,6 +19,7 @@ version = 1
 include = {include}  # files to include in tracking
 exclude = {exclude}  # files to exclude in tracking
 exclude_files = {exclude_files}  # files whose contents will be used to exclude other files from tracking
+exclude_binary_files = true  # whether to ignore binary files
 
 [project]
 name = "{name}"  # your project name

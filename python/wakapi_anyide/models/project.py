@@ -10,6 +10,7 @@ class ProjectFiles(BaseModel):
     include: List[str]
     exclude: List[str]
     exclude_files: List[str]
+    exclude_binary_files: bool = True
     
 class ProjectDescription(BaseModel):
     name: str

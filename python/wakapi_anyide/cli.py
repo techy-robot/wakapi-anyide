@@ -26,14 +26,14 @@ from wakapi_anyide.models.environment import Environment
 @dataclass
 class UnresolvedChangeEvent:
     filename: str
-    file: str
+    file: bytes
     time: float
 
 
 @dataclass
 class ChangeEvent:
     filename: str
-    file: str
+    file: bytes
     cursor: Tuple[int, int]
     lines_added: int
     lines_removed: int
@@ -44,64 +44,101 @@ class ChangeEvent:
 async def main(env: Environment):
     ev = asyncio.get_event_loop()
     queue: asyncio.Queue[UnresolvedChangeEvent] = asyncio.Queue()
-    cache: MutexDict[str, str] = MutexDict()
+    cache: MutexDict[str, bytes] = MutexDict()
     
     ev.create_task(watcher(env, queue, cache))
     await consumer(env, queue, cache)
     
 
-def process_file_changes(cache: Dict[str, str]):
-    async def inner(event: UnresolvedChangeEvent):
+def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
+    async def inner(event: UnresolvedChangeEvent) -> ChangeEvent | None:
         new_file = event.file
         old_file = cache[event.filename]
         
-        last_index = 0
-        for op in difflib.SequenceMatcher(a=old_file, b=new_file, autojunk=False).get_opcodes():
-            match op:
-                case ('replace', _, _, _, j2):
-                    last_index = max(last_index, j2)
-                case ('delete', i1, _, _, _):
-                    last_index = max(last_index, i1)
-                case ('insert', i1, _, j1, j2):
-                    last_index = max(last_index, j2)
-                case ('equal', _, _, _, _):
-                    pass
-                case _:
-                    raise Exception(f"Unknown opcode {op}")
+        try:
+            new_file = new_file.decode()
+            old_file = old_file.decode()
         
-        new_file_lines = new_file.splitlines()
-        added_lines = 0
-        deleted_lines = 0
-        for op in difflib.SequenceMatcher(a=old_file.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
-            match op:
-                case ('replace', i1, i2, j1, j2):
-                    added_lines += j2 - j1
-                    deleted_lines += i2 - i1
-                case ('delete', i1, i2, _, _):
-                    deleted_lines += i2 - i1
-                case ('insert', _, _, j1, j2):
-                    added_lines += j2 - j1
-                case ('equal', _, _, _, _):
-                    pass
-                case _:
-                    raise Exception(f"Unknown opcode {op}")
-        
-        line, col = index_to_linecol(new_file, last_index)
-        
-        return ChangeEvent(
-            filename=event.filename,
-            file=new_file,
-            cursor=(line, col),
-            lines_added=added_lines,
-            lines_removed=deleted_lines,
-            lines=len(new_file_lines),
-            time=event.time
-        )
+            last_index = 0
+            for op in difflib.SequenceMatcher(a=old_file, b=new_file, autojunk=False).get_opcodes():
+                match op:
+                    case ('replace', _, _, _, j2):
+                        last_index = max(last_index, j2)
+                    case ('delete', i1, _, _, _):
+                        last_index = max(last_index, i1)
+                    case ('insert', i1, _, j1, j2):
+                        last_index = max(last_index, j2)
+                    case ('equal', _, _, _, _):
+                        pass
+                    case _:
+                        raise Exception(f"Unknown opcode {op}")
+            
+            new_file_lines = new_file.splitlines()
+            added_lines = 0
+            deleted_lines = 0
+            for op in difflib.SequenceMatcher(a=old_file.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
+                match op:
+                    case ('replace', i1, i2, j1, j2):
+                        added_lines += j2 - j1
+                        deleted_lines += i2 - i1
+                    case ('delete', i1, i2, _, _):
+                        deleted_lines += i2 - i1
+                    case ('insert', _, _, j1, j2):
+                        added_lines += j2 - j1
+                    case ('equal', _, _, _, _):
+                        pass
+                    case _:
+                        raise Exception(f"Unknown opcode {op}")
+            
+            line, col = index_to_linecol(new_file, last_index)
+            
+            return ChangeEvent(
+                filename=event.filename,
+                file=event.file,
+                cursor=(line, col),
+                lines_added=added_lines,
+                lines_removed=deleted_lines,
+                lines=len(new_file_lines),
+                time=event.time
+            )
+        except UnicodeDecodeError:
+            if ignore_binary:
+                return
+            
+            added_lines = 0
+            deleted_lines = 0
+            last_index = 0
+            for op in difflib.SequenceMatcher(a=old_file, b=new_file, autojunk=False).get_opcodes():
+                match op:
+                    case ('replace', i1, i2, j1, j2):
+                        added_lines += j2 - j1
+                        deleted_lines += i2 - i1
+                        last_index = max(last_index, j2)
+                    case ('delete', i1, i2, _, _):
+                        deleted_lines += i2 - i1
+                        last_index = max(last_index, i1)
+                    case ('insert', _, _, j1, j2):
+                        added_lines += j2 - j1
+                        last_index = max(last_index, j2)
+                    case ('equal', _, _, _, _):
+                        pass
+                    case _:
+                        raise Exception(f"Unknown opcode {op}")
+            
+            return ChangeEvent(
+                filename=f"{event.filename}#wakapi-anyide-binaryfile",
+                file=event.file,
+                cursor=(1, last_index),
+                lines_added=added_lines,
+                lines_removed=deleted_lines,
+                lines=len(new_file),
+                time=event.time
+            )
     
     return inner
 
 
-async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], cache_lock: MutexDict[str, str]):
+async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], cache_lock: MutexDict[str, bytes]):
     next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
     changed_files: Dict[str, UnresolvedChangeEvent] = dict()
     
@@ -124,7 +161,10 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             continue
         
         async with cache_lock as cache:
-            changed_events = await asyncmap(process_file_changes(cache), changed_files.values())
+            changed_events = [x for x in await asyncmap(
+                process_file_changes(cache, env.project.files.exclude_binary_files),
+                changed_files.values()
+            ) if x is not None]
         changed_files.clear()
         
         print(f"Change summary:")
@@ -206,7 +246,7 @@ def directories(path: Path):
                 stack.append(subpath)
 
 
-async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], cache_lock: MutexDict[str, str]):
+async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], cache_lock: MutexDict[str, bytes]):
     excluded_pathspecs = env.project.files.exclude.copy()
     
     for file in env.project.files.exclude_files:
@@ -221,7 +261,7 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
             if excluded_paths.match_file(path):
                 return
             
-            async with open(path, 'r+') as file:
+            async with open(path, 'rb') as file:
                 cache[normalise(path)] = await file.read()
                 print(f"Cached {normalise(path)}")
         
@@ -246,7 +286,7 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
                     
                     await queue.put(UnresolvedChangeEvent(
                         filename=resolved_path,
-                        file="",
+                        file=b"",
                         time=time.time()
                     ))
                     
@@ -255,13 +295,13 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
                 case WatchEventType.Create:
                     if cache_lock.read().get(resolved_path) is None:
                         async with cache_lock as cache:
-                            cache[resolved_path] = ""
+                            cache[resolved_path] = b""
                 
                 case WatchEventType.Modify:
                     pass
             
             try:
-                async with open(resolved_path, 'r') as file:
+                async with open(resolved_path, 'rb') as file:
                     await queue.put(UnresolvedChangeEvent(
                         filename=resolved_path,
                         file=await file.read(),

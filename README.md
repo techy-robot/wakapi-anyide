@@ -26,7 +26,7 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.2.1
+  # https://github.com/iamawatermelo/wakapi-anyide v0.3.0
   
   [wakapi-anyide]
   version = 1  # don't change this
@@ -35,6 +35,7 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
   include = ["/python/**/*.py", "/*.toml"]  # files to include in tracking
   exclude = ["/.venv"]  # files to exclude in tracking
   exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
+  exclude_binary_files = true
   
   [project]
   name = "wakapi-anyide"  # your project name
@@ -99,6 +100,17 @@ All other configuration values are silently ignored.
 
 Not supported.
 
-## Limitations
+## Quirks and limitations
 
-wakapi-anyide is not integrated with your editor. It can only guess what you are doing.
+### Tracking
+
+wakapi-anyide is not integrated with your editor. It can only guess what you are doing through file changes.
+As such, it may sometimes pick up generated files.
+
+### Binary files
+
+wakapi-anyide can track binary files with `files.exclude_binary_files = false`.
+File changes are reported specially:
+- they are appended with `#wakapi-anyide-binary` in tracking
+- cursor position is set to the last change in the binary file
+- the line count are set to the binary diff count
