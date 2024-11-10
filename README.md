@@ -26,7 +26,7 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.3.0
+  # https://github.com/iamawatermelo/wakapi-anyide v0.3.1
   
   [wakapi-anyide]
   version = 1  # don't change this
