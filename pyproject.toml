@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.scripts]
-wakatime-anyide = "wakatime_anyide.__main__:app"
+wakapi-anyide = "wakapi_anyide.__main__:app"
 
 [tool.maturin]
 bindings = "pyo3"
