@@ -1,6 +1,4 @@
-#![feature(try_blocks)]
-
-use notify::event::{CreateKind, ModifyKind, RenameMode};
+use notify::event::{ModifyKind, RenameMode};
 use notify::{
     recommended_watcher, Event, EventKind, RecommendedWatcher, RecursiveMode,
     Result as NotifyResult, Watcher,
