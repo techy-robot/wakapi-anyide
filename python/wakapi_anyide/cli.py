@@ -8,7 +8,7 @@ from os.path import dirname
 from itertools import pairwise, chain
 from aiohttp import BasicAuth, request, ClientResponse
 import difflib
-import wakapi_anyide.backport.glob as glob
+from pathspec import PathSpec
 from wakapi_anyide._watch import Watch, WatchEventType
 from wakapi_anyide.helpers.mutex import MutexDict
 from wakapi_anyide.helpers.asynctools import asyncmap
@@ -206,41 +206,37 @@ def directories(path: Path):
                 stack.append(subpath)
 
 
-def is_included(path: str, included: List[Pattern], excluded: List[Pattern]):
-    return any(pattern.match(path) for pattern in included) and not any(pattern.match(path) for pattern in excluded)
-
-
 async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], cache_lock: MutexDict[str, str]):
-    included_paths_globs = env.project.files.include
-    excluded_paths_globs = env.project.files.exclude
+    excluded_pathspecs = env.project.files.exclude.copy()
     
-    included_paths_re = [re.compile(glob.translate(path_glob, recursive=True)) for path_glob in included_paths_globs]
-    excluded_paths_re = [re.compile(glob.translate(path_glob, recursive=True)) for path_glob in excluded_paths_globs]
+    for file in env.project.files.exclude_files:
+        async with open(file, 'r') as file:
+            excluded_pathspecs.extend(await file.readlines())
     
-    included_paths = set(chain.from_iterable((Path(x).absolute() for x in glob.glob(path_glob, recursive=True)) for path_glob in included_paths_globs))
-    excluded_paths = set(chain.from_iterable((Path(x).absolute() for x in glob.glob(path_glob, recursive=True)) for path_glob in excluded_paths_globs))
-    
-    included_directories = set(dirname(x) for x in included_paths) - set(dirname(x) for x in excluded_paths)
+    included_paths = PathSpec.from_lines('gitwildmatch', env.project.files.include)
+    excluded_paths = PathSpec.from_lines('gitwildmatch', excluded_pathspecs)
     
     async with cache_lock as cache: 
         async def add_cache(path: Path):
-            if path in excluded_paths:
+            if excluded_paths.match_file(path):
                 return
             
             async with open(path, 'r+') as file:
                 cache[normalise(path)] = await file.read()
                 print(f"Cached {normalise(path)}")
         
-        await asyncio.gather(*[add_cache(x) for x in included_paths])
+        await asyncio.gather(*[add_cache(Path('./').absolute() / Path(x)) for x in included_paths.match_tree('./')])
     
     watch = Watch()
     watch.add_watch("./")
+    
+    print("Watching!")
     
     async for ev_list in watch:
         for event in ev_list:
             resolved_path = normalise(Path(event.target))
             
-            if not is_included(resolved_path, included_paths_re, excluded_paths_re):
+            if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
                 continue
             
             match event.kind:

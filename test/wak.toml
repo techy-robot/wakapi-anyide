@@ -1,0 +1,12 @@
+# https://github.com/iamawatermelo/wakapi-anyide v0.1.0
+
+[meta]
+version = 1
+
+[files]
+include = []  # files to include in tracking
+exclude = []  # files to exclude in tracking
+exclude_files = []  # files whose contents will be used to exclude other files from tracking
+
+[project]
+name = "test"  # your project name

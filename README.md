@@ -5,11 +5,8 @@ Log your coding time against any WakaTime-like server.
 > Teenager? Check out [High Seas](https://highseas.hackclub.com/)!
 
 > [!IMPORTANT]
-> wakapi-anyide has only been tested on Linux and Windows.
+> wakapi-anyide has only been tested on Linux and Windows, and is still in development.
 > Please report any tracking bugs!
-
-> [!IMPORTANT]
-> wakapi-anyide is still in development. Some things probably won't work.
 
 ## Alternatives
 
@@ -22,7 +19,7 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 - Install `wakapi-anyide` with your favourite Python package manager
 
-- Run `wakapi-anyide setup`
+- Run `wakapi-anyide setup` and follow the instructions
 
 - Inspect and edit the generated `wak.toml`:
   ```toml

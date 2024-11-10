@@ -13,7 +13,6 @@ use std::thread;
 
 #[pymodule]
 mod _watch {
-
     use super::*;
 
     #[pyclass(eq, eq_int)]
@@ -176,6 +175,8 @@ mod _watch {
                     let slf = slf.clone().unbind();
                     let task = task.clone().unbind();
                     let evloop = evloop.clone().unbind();
+                    
+                    drop(rx_cell);
 
                     _py.allow_threads(move || {
                         thread::spawn(move || {
@@ -185,7 +186,7 @@ mod _watch {
                                 let task = task.bind(_py);
                                 let evloop = evloop.bind(_py);
                                 
-                                match slf.bind(_py).get().rx.try_lock() {
+                                match slf.bind(_py).get().rx.lock() {
                                     Ok(rx_cell) => {
                                         rx_cell.replace(Some(rx));
                                         drop(rx_cell);
