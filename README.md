@@ -34,7 +34,7 @@ These instructions are best run in an existing project.
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.3.2
+  # https://github.com/iamawatermelo/wakapi-anyide v0.4.0
   
   [wakapi-anyide]
   version = 1  # don't change this
