@@ -1,5 +1,9 @@
 import asyncio 
-from typing import Callable, Awaitable, Collection, List
+from typing import Awaitable
+from typing import Callable
+from typing import Collection
+from typing import List
+
 
 async def asyncmap[A, B](callable: Callable[[A], Awaitable[B]], iterable: Collection[A]) -> List[B]:
     """

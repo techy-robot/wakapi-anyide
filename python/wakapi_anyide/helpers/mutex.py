@@ -1,5 +1,7 @@
 from asyncio import Lock
-from typing import Dict, Mapping
+from typing import Dict
+from typing import Mapping
+
 
 class MutexDict[K, V]:
     """

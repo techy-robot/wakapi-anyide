@@ -1,12 +1,13 @@
+import asyncio
+from json import dumps
 from pathlib import Path
+
+import typer
 from wakapi_anyide import __version__
 from wakapi_anyide.cli import main
 from wakapi_anyide.models.config import WakatimeConfig
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.models.project import Project
-from json import dumps
-import typer
-import asyncio
 
 DEFAULT_IGNOREFILES = [".gitignore"]
 TEMPLATE = """
@@ -27,6 +28,7 @@ name = "{name}"  # your project name
 
 app = typer.Typer()
 
+
 @app.command()
 def test():
     asyncio.run(main(Environment(
@@ -34,7 +36,8 @@ def test():
         config=WakatimeConfig(),  # type: ignore
         project=Project()  # type: ignore
     )))
-    
+
+
 @app.command()
 def track():
     asyncio.run(main(Environment(
@@ -42,7 +45,8 @@ def track():
         config=WakatimeConfig(),  # type: ignore
         project=Project()  # type: ignore
     )))
-    
+
+
 @app.command()
 def setup():
     output = Path("wak.toml")

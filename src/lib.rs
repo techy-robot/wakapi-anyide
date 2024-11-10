@@ -47,7 +47,7 @@ mod _watch {
                 EventKind::Modify(kind) => {
                     match kind {
                         ModifyKind::Metadata(_) => {} // ignore metadata changes
-                        
+
                         ModifyKind::Any => ret.push(WatchEvent {
                             kind: WatchEventType::Modify,
                             target: event.paths.get(0).unwrap().clone(),
@@ -82,7 +82,7 @@ mod _watch {
                             });
                         }
 
-                        _ => println!("got unknown rename kind {kind:#?}"),
+                        _ => {}
                     }
                 }
 
@@ -91,7 +91,7 @@ mod _watch {
                     target: event.paths.get(0).unwrap().clone(),
                 }),
 
-                kind => println!("got unknown event kind {kind:#?}"),
+                _ => {}
             }
 
             ret
@@ -175,7 +175,7 @@ mod _watch {
                     let slf = slf.clone().unbind();
                     let task = task.clone().unbind();
                     let evloop = evloop.clone().unbind();
-                    
+
                     drop(rx_cell);
 
                     _py.allow_threads(move || {
