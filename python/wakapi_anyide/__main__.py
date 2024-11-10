@@ -1,4 +1,4 @@
-from wakapi_anyide import main
+from wakapi_anyide.cli import main
 from wakapi_anyide.models.config import WakatimeConfig
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.models.project import Project
