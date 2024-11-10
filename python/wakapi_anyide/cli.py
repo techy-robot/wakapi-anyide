@@ -13,7 +13,7 @@ from wakapi_anyide.helpers.mutex import MutexDict
 from wakapi_anyide.helpers.asynctools import asyncmap
 from aiofiles import open
 from functools import partial
-from os import uname
+from platform import uname
 from hashlib import sha256
 import base64
 import re
@@ -131,7 +131,7 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             print(f"{event.filename:20} at {event.cursor[0]}:{event.cursor[1]} +{event.lines_added} -{event.lines_removed}")
         
         host = uname()
-        user_agent = f"wakatime/unset ({host.sysname}-none-none) wakapi-anyide-wakatime/unset"
+        user_agent = f"wakatime/unset ({host.system}-none-none) wakapi-anyide-wakatime/unset"
         
         heartbeats = [{
             "entity": event.filename,
@@ -147,8 +147,8 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             "cursorpos": event.cursor[1],
             "is_write": True,
             "editor": "wakapi-anyide",
-            "machine": env.config.settings.hostname or f"anonymised machine {sha256(host.nodename.encode()).hexdigest()[:8]}",
-            "operating_system": host.sysname,
+            "machine": env.config.settings.hostname or f"anonymised machine {sha256(host.node.encode()).hexdigest()[:8]}",
+            "operating_system": host.system,
             "user_agent": user_agent
         } for event in changed_events]
         
