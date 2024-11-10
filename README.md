@@ -15,7 +15,10 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 ## Quickstart guide
 
-- **Set your IDE to autosave as quickly as possible.** This is how wakapi-anyide is able to track your coding time. Ideally, something like a second, so it saves as you type.
+- **Set your IDE to autosave as quickly as possible.**
+  This is how wakapi-anyide is able to track your coding time. Ideally, something like a second, so it saves as you type.
+  However, anything under your editor timeout preference in your WakaTime settings is fine.
+  For High Seas, it must be under two minutes.
 
 - Install `wakapi-anyide` with your favourite Python package manager
 
@@ -23,18 +26,18 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.0.1
+  # https://github.com/iamawatermelo/wakapi-anyide v0.2.1
   
   [wakapi-anyide]
-  version = 1                               # don't change this
+  version = 1  # don't change this
   
   [files]
-  include = ["./**/*.py", "./**/*.toml"]    # files to include in tracking
-  exclude = [".venv/**/*"]                  # files to exclude in tracking
-  exclude_files = [".gitignore"]            # files whose contents will be used to exclude other files from tracking
+  include = ["/python/**/*.py", "/*.toml"]  # files to include in tracking
+  exclude = ["/.venv"]  # files to exclude in tracking
+  exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
   
   [project]
-  name = "wakapi-anyide"                    # your project name
+  name = "wakapi-anyide"  # your project name
   ```
 
 - Run `wakapi-anyide test` in the same directory you have `wak.toml` in, and start coding for a bit.
@@ -47,7 +50,7 @@ If you don't need precise coding metrics, use the [WakaTime app](https://wakatim
 
 wakapi-anyide tells the WakaTime server:
 
-- your OS that you are using wakapi-anyide (`wakatime/unset (Linux-none-none) wakapi-anyide-wakatime/unset`)
+- your OS and that you are using wakapi-anyide (`wakatime/unset (Linux-none-none) wakapi-anyide-wakatime/unset`)
 - an anonymised hostname based off of your computer's name (`anonymised machine 749f8c4e`)
 - the relative path of the files you change (`./wakatime_anyide/__init__.py`)
 - the estimated time you have spent
