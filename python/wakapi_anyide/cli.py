@@ -5,6 +5,7 @@ import os
 import re
 import time
 from collections import deque
+from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import partial
 from hashlib import sha256
@@ -13,10 +14,9 @@ from itertools import pairwise
 from os.path import dirname
 from pathlib import Path
 from platform import uname
+from re import Pattern
 from typing import Dict
-from typing import Iterator
 from typing import List
-from typing import Pattern
 from typing import Set
 from typing import Tuple
 
@@ -30,6 +30,10 @@ from wakapi_anyide._watch import WatchEventType
 from wakapi_anyide.helpers.asynctools import asyncmap
 from wakapi_anyide.helpers.mutex import MutexDict
 from wakapi_anyide.models.environment import Environment
+
+
+class ConfigInvalidatedException(BaseException):
+    pass
 
 
 @dataclass
@@ -54,10 +58,14 @@ async def main(env: Environment):
     ev = asyncio.get_event_loop()
     queue: asyncio.Queue[UnresolvedChangeEvent] = asyncio.Queue()
     cache: MutexDict[str, bytes] = MutexDict()
+    shutdown_flag = asyncio.Event()
 
-    async with asyncio.TaskGroup() as tg:
-        tg.create_task(watcher(env, queue, cache))
-        tg.create_task(consumer(env, queue, cache))
+    fut = ev.create_task(consumer(env, queue, shutdown_flag, cache))
+    try:
+        await watcher(env, queue, cache)
+    finally:
+        shutdown_flag.set()
+        await fut
 
 
 def index_to_linecol(file: str, index: int):
@@ -162,21 +170,25 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
     return inner
 
 
-async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], cache_lock: MutexDict[str, bytes]):
+async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], flag: asyncio.Event, cache_lock: MutexDict[str, bytes]):
     next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
     changed_files: Dict[str, UnresolvedChangeEvent] = dict()
 
-    while True:
-        while next_heartbeat_due - time.time() > 0:
-            try:
-                event = await asyncio.wait_for(queue.get(), timeout=next_heartbeat_due - time.time())
+    while not flag.is_set():
+        while next_heartbeat_due - time.time() > 0 and not flag.is_set():
+            fut = asyncio.create_task(queue.get())
+            completed, rest = await asyncio.wait([
+                fut,
+                asyncio.create_task(flag.wait())
+            ], return_when=asyncio.FIRST_COMPLETED, timeout=next_heartbeat_due - time.time())  # type: ignore
+            
+            if fut in completed:
+                event = fut.result()
 
                 if env.is_test_only:
                     print(f"Got event for {event.filename}!")
 
                 changed_files[event.filename] = event
-            except TimeoutError:
-                break
 
         next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
 
@@ -285,6 +297,9 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
     async for ev_list in watch:
         for event in ev_list:
             resolved_path = normalise(Path(event.target))
+            
+            if resolved_path == "./wak.toml":
+                raise ConfigInvalidatedException("config invalidated")
 
             if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
                 continue

@@ -1,6 +1,6 @@
 from asyncio import Lock
+from collections.abc import Mapping
 from typing import Dict
-from typing import Mapping
 
 
 class MutexDict[K, V]:

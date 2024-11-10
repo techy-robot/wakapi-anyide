@@ -1,9 +1,11 @@
 import asyncio
 from json import dumps
 from pathlib import Path
+import time
 
 import typer
 from wakapi_anyide import __version__
+from wakapi_anyide.cli import ConfigInvalidatedException
 from wakapi_anyide.cli import main
 from wakapi_anyide.models.config import WakatimeConfig
 from wakapi_anyide.models.environment import Environment
@@ -29,22 +31,30 @@ name = "{name}"  # your project name
 app = typer.Typer()
 
 
+def run(is_test):
+    while True:
+        try:
+            asyncio.run(main(Environment(
+                is_test_only=is_test,
+                config=WakatimeConfig(),  # type: ignore
+                project=Project()  # type: ignore
+            )))
+        except ConfigInvalidatedException:
+            print(f"Detected config change, restarting in 1s")
+            time.sleep(1)
+            continue
+        except KeyboardInterrupt:
+            break
+
+
 @app.command()
 def test():
-    asyncio.run(main(Environment(
-        is_test_only=True,
-        config=WakatimeConfig(),  # type: ignore
-        project=Project()  # type: ignore
-    )))
+    run(True)
 
 
 @app.command()
 def track():
-    asyncio.run(main(Environment(
-        is_test_only=False,
-        config=WakatimeConfig(),  # type: ignore
-        project=Project()  # type: ignore
-    )))
+    run(False)
 
 
 @app.command()

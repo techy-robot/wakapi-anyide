@@ -1,7 +1,7 @@
 import asyncio 
-from typing import Awaitable
-from typing import Callable
-from typing import Collection
+from collections.abc import Awaitable
+from collections.abc import Callable
+from collections.abc import Collection
 from typing import List
 
 
