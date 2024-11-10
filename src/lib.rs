@@ -42,16 +42,19 @@ mod _watch {
                 EventKind::Other => {}     // ignore other events
                 EventKind::Access(_) => {} // ignore access events
 
-                EventKind::Create(CreateKind::File) => ret.push(WatchEvent {
+                EventKind::Create(_) => ret.push(WatchEvent {
                     kind: WatchEventType::Create,
                     target: event.paths.get(0).unwrap().clone(),
                 }),
 
-                EventKind::Create(CreateKind::Folder) => {}
-
                 EventKind::Modify(kind) => {
                     match kind {
                         ModifyKind::Metadata(_) => {} // ignore metadata changes
+                        
+                        ModifyKind::Any => ret.push(WatchEvent {
+                            kind: WatchEventType::Modify,
+                            target: event.paths.get(0).unwrap().clone(),
+                        }),
 
                         ModifyKind::Data(_) => ret.push(WatchEvent {
                             kind: WatchEventType::Modify,

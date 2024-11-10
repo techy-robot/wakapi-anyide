@@ -246,6 +246,9 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
                             cache[resolved_path] = ""
                 
                 case WatchEventType.Delete:
+                    if cache_lock.read().get(resolved_path) is None:
+                        return
+                    
                     await queue.put(UnresolvedChangeEvent(
                         filename=resolved_path,
                         file="",
