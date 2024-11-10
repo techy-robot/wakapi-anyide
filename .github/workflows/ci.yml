@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        name: python
+        id: python
         with:
           python-version: '>=3.12 <4'
       - name: Set up pip cache
@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        name: python
+        id: python
         with:
           python-version: '>=3.12 <4'
       - name: Set up pip cache
@@ -102,7 +102,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        name: python
+        id: python
         with:
           python-version: '>=3.12 <4'
       - name: Set up pip cache
@@ -134,7 +134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        name: python
+        id: python
         with:
           python-version: '>=3.12 <4'
       - name: Set up pip cache
