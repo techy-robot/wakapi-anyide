@@ -54,51 +54,42 @@ def process_file_changes(cache: Dict[str, str]):
         new_file = event.file
         old_file = cache[event.filename]
         
-        last_index = 0
-        for op in difflib.SequenceMatcher(a=old_file, b=new_file, autojunk=False).get_opcodes():
-            match op:
-                case ('replace', _, _, _, j2):
-                    last_index = max(last_index, j2)
-                case ('delete', i1, _, _, _):
-                    last_index = max(last_index, i1)
-                case ('insert', i1, _, j1, j2):
-                    last_index = max(last_index, j2)
-                case ('equal', _, _, _, _):
-                    pass
-                case _:
-                    raise Exception(f"Unknown opcode {op}")
+        # Simplified process, we don't actually need to track individual changes and compare all the lines, all we need to know is if it changed.
+        # At some point I will add a mechanism for calculating md5 hash of the file and compare it to the past 10 file hashes over a long time range to verify someone
+        # isn't just spamming the same file over and over.
         
+        new_file_lines = 0
         new_file_lines = new_file.splitlines()
-        added_lines = 0
-        deleted_lines = 0
-        for op in difflib.SequenceMatcher(a=old_file.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
-            match op:
-                case ('replace', i1, i2, j1, j2):
-                    added_lines += j2 - j1
-                    deleted_lines += i2 - i1
-                case ('delete', i1, i2, _, _):
-                    deleted_lines += i2 - i1
-                case ('insert', _, _, j1, j2):
-                    added_lines += j2 - j1
-                case ('equal', _, _, _, _):
-                    pass
-                case _:
-                    raise Exception(f"Unknown opcode {op}")
+        old_file_lines = 0
+        old_file_lines = old_file.splitlines()
         
-        line, col = index_to_linecol(new_file, last_index)
+        changed_lines = 0
+        changed_lines = abs(len(new_file_lines) - len(old_file_lines)) 
+        
+        if new_file == old_file: # This should never happen
+            print ("file did not change")
+            
+        if new_file != old_file:
+            print ("file changed")
+            
+        # There is a bug with the cache. It correctly knows when the file has changed, but it doesn't update the cache to remove the changed lines.
+        # It knows when a file has changed and when it hasn't, but the cache file contents aren't updated and its always comparing to that. Security measure perhaps?
+        
+        # Need to include a mechanism to drop the change event when the file hasn't changed at all
+        if changed_lines == 0 and new_file != old_file: 
+            changed_lines = 7 # random placeholder value, we don't actually care how many lines changed from the diff   
         
         return ChangeEvent(
             filename=event.filename,
             file=new_file,
-            cursor=(line, col),
-            lines_added=added_lines,
-            lines_removed=deleted_lines,
+            cursor=(0, 0),
+            lines_added=changed_lines,
+            lines_removed=changed_lines,
             lines=len(new_file_lines),
             time=event.time
         )
     
     return inner
-
 
 async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], cache_lock: MutexDict[str, str]):
     next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
@@ -147,6 +138,7 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             "operating_system": host.sysname,
             "user_agent": user_agent
         } for event in changed_events]
+        # print("heartbeats", f"{heartbeats}")
         
         response: ClientResponse
         last_text: str | None = None
