@@ -1,6 +1,7 @@
 import asyncio
 from collections import deque
 from dataclasses import dataclass
+import os
 from typing import Dict, Iterator, List, Pattern, Set, Tuple
 from pathlib import Path
 from os.path import dirname
@@ -240,11 +241,6 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
             resolved_path = normalise(Path(event.target))
             
             match event.kind:
-                case WatchEventType.Create:
-                    if cache_lock.read().get(resolved_path) is None:
-                        async with cache_lock as cache:
-                            cache[resolved_path] = ""
-                
                 case WatchEventType.Delete:
                     if cache_lock.read().get(resolved_path) is None:
                         return
@@ -257,12 +253,20 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
                     
                     return
                 
+                case WatchEventType.Create:
+                    if cache_lock.read().get(resolved_path) is None:
+                        async with cache_lock as cache:
+                            cache[resolved_path] = ""
+                
                 case WatchEventType.Modify:
                     pass
             
-            async with open(resolved_path, 'r') as file:
-                await queue.put(UnresolvedChangeEvent(
-                    filename=resolved_path,
-                    file=await file.read(),
-                    time=time.time()
-                ))
+            try:
+                async with open(resolved_path, 'r') as file:
+                    await queue.put(UnresolvedChangeEvent(
+                        filename=resolved_path,
+                        file=await file.read(),
+                        time=time.time()
+                    ))
+            except OSError as e:
+                print(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
