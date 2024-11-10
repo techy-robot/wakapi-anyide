@@ -2,7 +2,6 @@ import asyncio
 from collections import deque
 from dataclasses import dataclass
 from typing import Dict, Iterator, List, Pattern, Set, Tuple
-from asyncinotify import Inotify, Mask
 from pathlib import Path
 from os.path import dirname
 from itertools import pairwise, chain

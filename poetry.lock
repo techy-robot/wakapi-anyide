@@ -137,17 +137,6 @@ files = [
 frozenlist = ">=1.1.0"
 
 [[package]]
-name = "asyncinotify"
-version = "4.2.0"
-description = "A simple optionally-async python inotify library, focused on simplicity of use and operation, and leveraging modern Python features"
-optional = false
-python-versions = "<4,>=3.6"
-files = [
-    {file = "asyncinotify-4.2.0-py3-none-any.whl", hash = "sha256:23cbcb0704cc65a2009d5ddc5a70dc5be6560708d8a684bba82e03e384c6295f"},
-    {file = "asyncinotify-4.2.0.tar.gz", hash = "sha256:dac1d75e16a4919c6eab84a90ff51218db622c5524a84a5c501a0b62ea7ec7ea"},
-]
-
-[[package]]
 name = "attrs"
 version = "24.2.0"
 description = "Classes Without Boilerplate"
@@ -668,4 +657,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "485d1883de556b0953dc1b3c0bec6410193c84ace799e271f5c3034e77aeb5f3"
+content-hash = "dccb2cd631bdeb3e1513a5650c7828ca1f22ea11754ca144f4d3f6a4205c2767"
