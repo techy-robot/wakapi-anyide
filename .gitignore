@@ -1,2 +1,10 @@
 .venv/
 __pycache__
+
+# Added by cargo
+
+/target
+
+# Maturin
+
+*.abi3.so

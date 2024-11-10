@@ -9,6 +9,7 @@ from itertools import pairwise, chain
 from aiohttp import BasicAuth, request, ClientResponse
 import difflib
 import wakapi_anyide.backport.glob as glob
+from wakapi_anyide._watch import Watch, WatchEventType
 from wakapi_anyide.helpers.mutex import MutexDict
 from wakapi_anyide.helpers.asynctools import asyncmap
 from aiofiles import open
@@ -108,6 +109,10 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
         while next_heartbeat_due - time.time() > 0:
             try:
                 event = await asyncio.wait_for(queue.get(), timeout=next_heartbeat_due - time.time())
+                
+                if env.is_test_only:
+                    print(f"Got event for {event.filename}!")
+                
                 changed_files[event.filename] = event
             except TimeoutError:
                 break
@@ -169,7 +174,7 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             raise Exception(f"Failed to send heartbeat: {response.status} {last_text}")
 
 
-def normalise(path):
+def normalise(path: Path):
     return f"./{(path.relative_to(Path('./').absolute()))}"
 
 
@@ -187,8 +192,9 @@ def index_to_linecol(file: str, index: int):
     return line + 1, col + 1
 
 
-def directories(path):
-    assert path.is_dir()
+def directories(path: Path):
+    if not path.exists() or not path.is_dir():
+        return
     
     stack = deque()
     stack.append(path)
@@ -227,55 +233,34 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
         
         await asyncio.gather(*[add_cache(x) for x in included_paths])
     
-    mask = Mask.CLOSE_WRITE | Mask.CREATE | Mask.DELETE | Mask.MOVE
-    with Inotify() as inotify:
-        for directory in directories(Path("./")):
-            inotify.add_watch(directory, mask)
-        
-        async for event in inotify:
-            if event.path is None:
-                continue
-                
-            resolved_path = f"./{event.path}"
+    watch = Watch()
+    watch.add_watch("./")
+    
+    async for ev_list in watch:
+        for event in ev_list:
+            resolved_path = normalise(Path(event.target))
             
-            if Mask.ISDIR in event.mask:
-                if Mask.CREATE in event.mask or Mask.MOVED_TO in event.mask:
-                    # When a directory is created or moved here:
-                    print(f"Directory moved or created here: {resolved_path}")
-                    for directory in directories(event.path):
-                        inotify.add_watch(directory, mask)
-                if Mask.MOVED_FROM in event.mask:
-                    # When a directory is moved out of here:
-                    print(f"Directory moved out of here: {resolved_path}")
-                    watches = [watch for watch in inotify._watches.values() if watch.path.is_relative_to(event.path)]
-                    for watch in watches:
-                        inotify.rm_watch(watch)
+            match event.kind:
+                case WatchEventType.Create:
+                    if cache_lock.read().get(resolved_path) is None:
+                        async with cache_lock as cache:
+                            cache[resolved_path] = ""
                 
-                continue
-            else:
-                if Mask.MOVED_FROM in event.mask or Mask.DELETE in event.mask:
-                    # When a file is moved out or deleted:
-                    if is_included(resolved_path, included_paths_re, excluded_paths_re):   
-                        print(f"File moved out or deleted: {resolved_path}")
-                        await queue.put(UnresolvedChangeEvent(
-                            filename=resolved_path,
-                            file="",
-                            time=time.time()
-                        ))
-                    continue
-                
-            if is_included(resolved_path, included_paths_re, excluded_paths_re):  
-                async with open(event.path, 'r') as file:
-                    file_contents = await file.read()
+                case WatchEventType.Delete:
+                    await queue.put(UnresolvedChangeEvent(
+                        filename=resolved_path,
+                        file="",
+                        time=time.time()
+                    ))
                     
-                if Mask.CREATE in event.mask or Mask.MOVED_TO in event.mask:
-                    # When a file is created or moved here:
-                    print(f"File moved or created here: {resolved_path}")
-                    async with cache_lock as cache:
-                        cache[resolved_path] = file_contents
+                    return
                 
+                case WatchEventType.Modify:
+                    pass
+            
+            async with open(resolved_path, 'r') as file:
                 await queue.put(UnresolvedChangeEvent(
                     filename=resolved_path,
-                    file=file_contents,
+                    file=await file.read(),
                     time=time.time()
                 ))

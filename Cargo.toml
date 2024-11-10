@@ -1,0 +1,15 @@
+[package]
+name = "wakapi-anyide"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "wakapi_anyide"
+crate-type = ["cdylib"]
+
+[dependencies]
+notify = "7.0.0"
+
+[dependencies.pyo3]
+version = "0.22.5"
+features = ["abi3-py312", "extension-module"]
