@@ -22,13 +22,14 @@ def index_to_linecol(file: str, index: int):
 
 
 def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: float, env: Environment) -> Event | None:
+    
     if len(new_file) > 2**16 or len(old_file) > 2**16:
         diff = len(new_file) - len(old_file)
         lines_added = max(0, diff)
         lines_removed = -min(0, diff)
         
         return Event(
-            filename=f"{filename}#wakapi-anyide-toolarge",
+            filename=filename,
             cursor=(0, 0),
             lines_added=lines_added,
             lines_removed=lines_removed,
@@ -107,7 +108,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
                     raise Exception(f"Unknown opcode {op}")
 
         return Event(
-            filename=f"{filename}#wakapi-anyide-binaryfile",
+            filename=filename,
             cursor=(1, last_index),
             lines_added=added_lines,
             lines_removed=deleted_lines,

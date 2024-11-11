@@ -87,6 +87,10 @@ class FileWatcher(Watcher):
                         env=self.env
                     )
                     
+                    # Deleting the file from cache
+                    del self.cache[resolved_path]
+                    print(f"Deleted {event.filename} from cache")
+                    
                     if event is not None:
                         await queue.put(event)
     
@@ -116,6 +120,9 @@ class FileWatcher(Watcher):
                                 
                             self.current_file = resolved_path
                             self.current_file_bytes = await file.read()
+                        
+                        # Update the file in the cache
+                        self.cache[resolved_path] = await file.read()
                 
                 except OSError as e:
                     if Path(resolved_path).is_dir():
