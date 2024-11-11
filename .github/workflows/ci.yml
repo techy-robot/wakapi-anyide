@@ -26,7 +26,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: |
-          pipx install reorder-python-imports
+          pip install reorder-python-imports
           reorder-python-imports --py312-plus python/wakapi_anyide/**/*.py --exit-zero-even-if-changed
           git diff --exit-code
   
@@ -38,7 +38,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: |
-          pipx install hatch
+          pip install reorder-python-imports
           hatch build
           pip install dist/*.whl
           wakapi-anyide --help
