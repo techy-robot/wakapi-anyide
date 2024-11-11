@@ -174,7 +174,7 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             "category": "coding",
             "time": event.time,
             "project": env.project.project.name,
-            "language": Path(event.filename).suffix.replace('.', '') or Path(event.filename).name,
+            **({"language": languageProcessor(env, event.filename)} if languageProcessor(env, event.filename) is not None else {}), # dict comprehension, only include language if it's custom defined, otherwise let Wakatime determine
             "lines": event.lines,
             "line_additions": event.lines_added,
             "line_deletions": event.lines_removed,
@@ -207,6 +207,13 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
         else:
             raise Exception(f"Failed to send heartbeat: {response.status} {last_text}")
 
+def languageProcessor(env: Environment, filename: str):
+    languages = env.project.files.language_mapping
+    suffix = Path(filename).suffix
+    for x, lang in languages:
+        if suffix == x: # If the suffix matches the defined one in the languages table
+            return lang
+    return suffix
 
 def normalise(path: Path):
     return f"./{(path.relative_to(Path('./').absolute()))}"
