@@ -2,7 +2,7 @@ import asyncio
 import base64
 import logging
 import time
-from asyncio import Future
+from asyncio import Future, Task
 from asyncio import Queue
 from asyncio import TaskGroup
 from collections.abc import Sequence
@@ -123,7 +123,7 @@ def language_processor(env: Environment, file_extension: str) -> str:
 
     lang = languages.get(file_extension)  # If the suffix matches a defined one in the languages table
     if lang is None:
-        return suffix.replace(".", "")  # If it didn't find a match, return the suffix only
+        return file_extension.replace(".", "")  # If it didn't find a match, return the suffix only
     return lang
     
     
@@ -137,8 +137,17 @@ async def run(env: Environment):
     async with TaskGroup() as tg:
         for runner in runners:
             await runner.setup(tg, emit_events)
-            
+        
+        async def throw_exception(exc):
+            raise exc
+        
         task = ev.create_task(heartbeat_task(env, emit_events, runners, should_shutdown))
+        
+        def done_callback(task: Task):
+            if (exc := task.exception()) is not None:
+                tg.create_task(throw_exception(exc))
+        
+        task.add_done_callback(done_callback)
     
     should_shutdown.set()
     await task
