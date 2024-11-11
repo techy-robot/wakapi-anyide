@@ -1,13 +1,15 @@
-import time
 import logging
+import time
 from asyncio import Task
 from asyncio.queues import Queue
 from asyncio.taskgroups import TaskGroup
+from collections.abc import AsyncGenerator
 from pathlib import Path
-from typing import AsyncGenerator, Dict
+from typing import Dict
 
 from aiofiles import open
 from pathspec import PathSpec
+
 from wakapi_anyide._rust.watch import Watch
 from wakapi_anyide._rust.watch import WatchEventType
 from wakapi_anyide.helpers.filediffer import process_file_change

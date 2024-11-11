@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-wakapi-anyide = "wakapi_anyide.__main__:main"
+wakapi-anyide = "wakapi_anyide.__main__:app"
 
 [tool.maturin]
 bindings = "pyo3"
