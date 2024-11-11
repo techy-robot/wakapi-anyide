@@ -2,7 +2,7 @@ import asyncio
 import base64
 import logging
 import time
-from asyncio import Future, Task
+from asyncio import CancelledError, Future, Task
 from asyncio import Queue
 from asyncio import TaskGroup
 from collections.abc import Sequence
@@ -134,20 +134,29 @@ async def run(env: Environment):
     should_shutdown = asyncio.Event()
     task: Future
     
-    async with TaskGroup() as tg:
-        for runner in runners:
-            await runner.setup(tg, emit_events)
+    try:
+        async with TaskGroup() as tg:
+            for runner in runners:
+                await runner.setup(tg, emit_events)
+            
+            async def throw_exception(exc):
+                raise exc
+            
+            task = ev.create_task(heartbeat_task(env, emit_events, runners, should_shutdown))
+            
+            def done_callback(task: Task):
+                try:
+                    exc = task.exception()
+                except CancelledError:
+                    return
+                
+                if exc is not None and type(exc) not in (CancelledError, KeyboardInterrupt):
+                    print(exc)
+                    tg.create_task(throw_exception(exc))
         
-        async def throw_exception(exc):
-            raise exc
-        
-        task = ev.create_task(heartbeat_task(env, emit_events, runners, should_shutdown))
-        
-        def done_callback(task: Task):
-            if (exc := task.exception()) is not None:
-                tg.create_task(throw_exception(exc))
-        
-        task.add_done_callback(done_callback)
+            task.add_done_callback(done_callback)
+    except KeyboardInterrupt:
+        pass
     
     should_shutdown.set()
     await task
