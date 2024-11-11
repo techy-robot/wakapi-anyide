@@ -67,21 +67,6 @@ async def main(env: Environment):
         shutdown_flag.set()
         await fut
 
-
-def index_to_linecol(file: str, index: int):
-    line = 0
-    col = 0
-
-    for character in file[:index]:
-        if character == '\n':
-            line += 1
-            col = 0
-        else:
-            col += 1
-
-    return line + 1, col + 1
-
-
 def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
     async def inner(event: UnresolvedChangeEvent) -> ChangeEvent | None:
         new_file = event.file
@@ -90,46 +75,31 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
         try:
             new_file = new_file.decode()
             old_file = old_file.decode()
-
-            last_index = 0
-            for op in difflib.SequenceMatcher(a=old_file, b=new_file, autojunk=False).get_opcodes():
-                match op:
-                    case ('replace', _, _, _, j2):
-                        last_index = max(last_index, j2)
-                    case ('delete', i1, _, _, _):
-                        last_index = max(last_index, i1)
-                    case ('insert', i1, _, j1, j2):
-                        last_index = max(last_index, j2)
-                    case ('equal', _, _, _, _):
-                        pass
-                    case _:
-                        raise Exception(f"Unknown opcode {op}")
+            
+            # Simplified process, we don't actually need to track individual changes and compare all the lines, all we need to know is if it changed.
+            # At some point I will add a mechanism for calculating md5 hash of the file and compare it to the past 10 file hashes over a long time range to verify someone
+            # isn't just spamming the same file over and over.
 
             new_file_lines = new_file.splitlines()
-            added_lines = 0
-            deleted_lines = 0
-            for op in difflib.SequenceMatcher(a=old_file.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
-                match op:
-                    case ('replace', i1, i2, j1, j2):
-                        added_lines += j2 - j1
-                        deleted_lines += i2 - i1
-                    case ('delete', i1, i2, _, _):
-                        deleted_lines += i2 - i1
-                    case ('insert', _, _, j1, j2):
-                        added_lines += j2 - j1
-                    case ('equal', _, _, _, _):
-                        pass
-                    case _:
-                        raise Exception(f"Unknown opcode {op}")
 
-            line, col = index_to_linecol(new_file, last_index)
+            old_file_lines = old_file.splitlines()
+            
+            changed_lines = 0
+            changed_lines = abs(len(new_file_lines) - len(old_file_lines)) 
+            
+            # Need to include a mechanism to drop the change event when the file hasn't changed at all
+            if new_file == old_file:
+                print ("file did not change")
+                
+            if changed_lines == 0 and new_file != old_file: 
+                changed_lines = 7 # random placeholder value, we don't actually care how many lines changed from the diff 
 
             return ChangeEvent(
                 filename=event.filename,
                 file=event.file,
-                cursor=(line, col),
-                lines_added=added_lines,
-                lines_removed=deleted_lines,
+                cursor=(0, 0),
+                lines_added=changed_lines,
+                lines_removed=changed_lines,
                 lines=len(new_file_lines),
                 time=event.time
             )
@@ -137,32 +107,16 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
             if ignore_binary:
                 return
 
-            added_lines = 0
-            deleted_lines = 0
-            last_index = 0
-            for op in difflib.SequenceMatcher(a=old_file, b=new_file, autojunk=False).get_opcodes():
-                match op:
-                    case ('replace', i1, i2, j1, j2):
-                        added_lines += j2 - j1
-                        deleted_lines += i2 - i1
-                        last_index = max(last_index, j2)
-                    case ('delete', i1, i2, _, _):
-                        deleted_lines += i2 - i1
-                        last_index = max(last_index, i1)
-                    case ('insert', _, _, j1, j2):
-                        added_lines += j2 - j1
-                        last_index = max(last_index, j2)
-                    case ('equal', _, _, _, _):
-                        pass
-                    case _:
-                        raise Exception(f"Unknown opcode {op}")
+            changed_lines = 0
+            if new_file != old_file: 
+                changed_lines = 7 # random placeholder value, we don't actually care how many lines changed from the diff 
 
             return ChangeEvent(
                 filename=f"{event.filename}#wakapi-anyide-binaryfile",
                 file=event.file,
-                cursor=(1, last_index),
-                lines_added=added_lines,
-                lines_removed=deleted_lines,
+                cursor=(0, 0),
+                lines_added=changed_lines,
+                lines_removed=changed_lines,
                 lines=len(new_file),
                 time=event.time
             )
