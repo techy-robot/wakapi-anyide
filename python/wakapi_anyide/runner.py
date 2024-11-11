@@ -6,13 +6,10 @@ from asyncio import Future
 from asyncio import Queue
 from asyncio import TaskGroup
 from collections.abc import Sequence
-from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 from platform import uname
 from typing import Dict
-from typing import List
-from typing import Tuple
 
 from aiohttp import ClientResponse
 from aiohttp import request

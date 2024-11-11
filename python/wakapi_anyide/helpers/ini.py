@@ -3,9 +3,7 @@ from pathlib import Path
 from typing import Any
 from typing import Dict
 
-from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings
-from pydantic_settings import PydanticBaseSettingsSource
 from pydantic_settings.sources import ConfigFileSourceMixin
 from pydantic_settings.sources import InitSettingsSource
 

@@ -3,7 +3,6 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from typing import Protocol
 from typing import Tuple
-from typing_extensions import AsyncGenerator
 
 from wakapi_anyide.models.environment import Environment
 
