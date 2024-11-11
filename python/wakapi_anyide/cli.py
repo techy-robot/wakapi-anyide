@@ -4,6 +4,7 @@ import difflib
 import os
 import re
 import time
+import copy
 from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -71,7 +72,15 @@ async def main(env: Environment):
 def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
     async def inner(event: UnresolvedChangeEvent) -> ChangeEvent | None:
         new_file = event.file
-        old_file = cache[event.filename]
+        old_file = copy.deepcopy(cache[event.filename])
+        
+        # Updating the cache
+        
+        if len(event.file) == 0:# Delete item from cache if the new file is empty, because there is no reason keeping the old
+            del cache[event.filename]
+            print(f"Deleted {event.filename} from cache")
+        else:# Update the cache for the file
+            cache[event.filename] = event.file
 
         try: #Process text files and finding line changes
             new_file = new_file.decode()
@@ -97,6 +106,8 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
             # Need to include a mechanism to drop the change event when the file hasn't changed at all
             if new_file == old_file:
                 print ("file did not change")
+                
+            # TODO: The cache store a copy of every single file in memory. This is not a good idea for large multi-gigabyte projects, but it should be fine for small projects.
                 
             if changed_lines == 0 and new_file != old_file: 
                 added_lines = 7 # random placeholder value, we don't actually care how many lines changed from the diff 
@@ -284,7 +295,7 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
                 if cache_lock.read().get(resolved_path) is None:
                     print(f"Not in cache, so deletion for {resolved_path} ignored")
                     continue
-
+                
                 await queue.put(UnresolvedChangeEvent(
                     filename=resolved_path,
                     file=b"",
