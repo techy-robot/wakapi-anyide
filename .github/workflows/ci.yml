@@ -27,7 +27,8 @@ jobs:
           python-version: '3.12'
       - run: |
           pipx install reorder-python-imports
-          reorder-python-imports --py312-plus python/wakapi_anyide/**/*.py
+          reorder-python-imports --py312-plus python/wakapi_anyide/**/*.py --exit-zero-even-if-changed
+          git diff --exit-code
   
   test:
     runs-on: ubuntu-latest
@@ -40,7 +41,7 @@ jobs:
           pipx install hatch
           hatch build
           pip install dist/*.whl
-          wakapi-anyide
+          wakapi-anyide --help
   
   linux:
     runs-on: ${{ matrix.platform.runner }}
