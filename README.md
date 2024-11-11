@@ -45,6 +45,7 @@ These instructions are best run in an existing project.
   exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
   exclude_binary_files = true
   
+  
   [project]
   name = "wakapi-anyide"  # your project name
   ```

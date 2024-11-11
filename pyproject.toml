@@ -41,9 +41,7 @@ module-name = "wakapi_anyide._rust"
 venvPath = "."
 venv = ".venv"
 reportMissingModuleSource = false
-reportUnusedExpression = true
 reportUnusedImport = true
-executionEnvironments = [{root = "python/"}]
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]

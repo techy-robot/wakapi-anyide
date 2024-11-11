@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Annotated
 from typing import TypeAlias
 
+from rich.console import Console
+from rich.highlighter import Highlighter
+from rich.text import Text
 import typer
 
 from wakapi_anyide import __version__
@@ -41,6 +44,11 @@ app = typer.Typer(
 )
 
 
+class NoHighlights(Highlighter):
+    def highlight(self, text: Text) -> None:
+        pass
+
+
 def setup_logging(is_verbose: bool):
     try:
         from rich.logging import RichHandler
@@ -49,7 +57,7 @@ def setup_logging(is_verbose: bool):
             format="[bold magenta]{module}[/bold magenta][bright_black]:{funcName}@{lineno}[/bright_black]  {message}",
             style='{',
             datefmt="[%X]",
-            handlers=[RichHandler(rich_tracebacks=True, markup=True, show_time=False, show_path=False)]
+            handlers=[RichHandler(highlighter=NoHighlights(), rich_tracebacks=True, markup=True, show_time=False, show_path=False)]
         )
     except ImportError:
         logging.basicConfig(
