@@ -7,8 +7,6 @@ from typing import Annotated
 from typing import TypeAlias
 
 import typer
-from rich.highlighter import Highlighter
-from rich.text import Text
 
 from wakapi_anyide import __version__
 from wakapi_anyide.models.config import WakatimeConfig
@@ -43,10 +41,15 @@ app = typer.Typer(
     pretty_exceptions_enable=False  # they don't report asyncio taskgroup exceptions correctly
 )
 
-
-class NoHighlights(Highlighter):
-    def highlight(self, text: Text) -> None:
-        pass
+try:
+    from rich.highlighter import Highlighter
+    from rich.text import Text
+    
+    class NoHighlights(Highlighter):
+        def highlight(self, text: Text) -> None:
+            pass
+except ImportError:
+    pass
 
 
 def setup_logging(is_verbose: bool):

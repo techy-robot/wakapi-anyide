@@ -1,6 +1,6 @@
 [project]
 name = "wakapi-anyide"
-version = "0.6.2"
+version = "0.6.3"
 description = "Time tracking for any IDE with WakaTime-like servers"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-color = "rich~=13.9.4"
+color = ["rich~=13.9.4"]
 
 [project.scripts]
 wakapi-anyide = "wakapi_anyide.__main__:app"
