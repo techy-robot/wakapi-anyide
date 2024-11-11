@@ -124,3 +124,7 @@ File changes are reported specially:
 - they are appended with `#wakapi-anyide-binary` in tracking
 - cursor position is set to the last change in the binary file
 - the line count are set to the binary diff count
+
+### Large files
+
+For performance reasons, files which are larger than 64 KiB will only report changes in filesize.
