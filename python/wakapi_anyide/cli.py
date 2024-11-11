@@ -300,7 +300,6 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
 
     async for ev_list in watch:
         for event in ev_list:
-            print(event)
             resolved_path = normalise(Path(event.target))
             
             if resolved_path == "./wak.toml":
