@@ -18,18 +18,6 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: |
-          pip install reorder-python-imports
-          reorder-python-imports --py312-plus python/wakapi_anyide/**/*.py --exit-zero-even-if-changed
-          git diff --exit-code
-  
   test:
     runs-on: ubuntu-latest
     steps:
@@ -37,11 +25,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: |
-          pip install reorder-python-imports
+      - name: Test that the program runs
+        run: |
+          pip install hatch
           hatch build
           pip install dist/*.whl
           wakapi-anyide --help
+      - name: Ensure imports are formatted correctly
+        run: |
+          hatch run pip install reorder-python-imports==3.14.0
+          hatch run reorder-python-imports --application-directories=python/ --py312-plus python/wakapi_anyide/**/*.py --exit-zero-even-if-changed
+          git diff --exit-code
   
   linux:
     runs-on: ${{ matrix.platform.runner }}
