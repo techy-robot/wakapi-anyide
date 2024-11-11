@@ -9,6 +9,7 @@ from pydantic_settings.main import SettingsConfigDict
 
 class ProjectMeta(BaseModel):
     version: Literal[1]
+    watchers: List[str] = ['files']
 
 
 class ProjectFiles(BaseModel):

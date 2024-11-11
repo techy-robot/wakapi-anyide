@@ -12,6 +12,7 @@ from pathspec import PathSpec
 
 from wakapi_anyide._rust.watch import Watch
 from wakapi_anyide._rust.watch import WatchEventType
+from wakapi_anyide.helpers.filediffer import File
 from wakapi_anyide.helpers.filediffer import process_file_change
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
@@ -19,17 +20,32 @@ from wakapi_anyide.watchers.types import Watcher
 
 logger = logging.getLogger()
 
+def bytes_to_human(size: int):
+    if size == 0:
+        return "(empty)"
+    
+    for i, suffix in enumerate(["B", "KiB", "MiB", "GiB", "TiB"]):
+        if 1024**i < size < 1024**(i+1):
+            return f"{(size / (1024**i)):.2f} {suffix}"
+    
+    return f"{(size / 1024**6):.2f} PiB"
+    
+
+def format_file(file: File):
+    color = "red" if file.too_large else "bright_black"
+    extra = "  [yellow]Large file[/yellow]" if file.too_large else ""
+    return(f"{file.path}  [{color}]{bytes_to_human(file.size)}[/{color}]{extra}")
+
 
 class FileWatcher(Watcher):
     """
     Watches filesystem events for file changes.
     """
     
-    current_file: str | None = None
-    current_file_bytes: bytes | None = None
+    current_file: File | None = None
     env: Environment
     task: Task
-    cache: Dict[str, bytes] = dict()
+    cache: Dict[str, File] = dict()
     
     def __init__(self, env: Environment):
         self.env = env
@@ -59,10 +75,10 @@ class FileWatcher(Watcher):
             if excluded_paths.match_file(resolved_path):
                 return
             
-            logger.info(f"- {resolved_path}")
+            file = await File.read(resolved_path)
             
-            async with open(resolved_path, 'rb') as file:
-                self.cache[resolved_path] = await file.read()
+            self.cache[resolved_path] = file
+            logger.info(f"  {format_file(file)}")
     
         logger.info("Watching!")
     
@@ -80,8 +96,7 @@ class FileWatcher(Watcher):
                         continue
                     
                     event = process_file_change(
-                        filename=resolved_path,
-                        new_file=b"",
+                        new_file=File(resolved_path, b"", 0),
                         old_file=self.cache[resolved_path],
                         time=time.time(),
                         env=self.env
@@ -89,40 +104,44 @@ class FileWatcher(Watcher):
                     
                     # Deleting the file from cache
                     del self.cache[resolved_path]
-                    print(f"Deleted {event.filename} from cache")
+                    logger.info(f"Deleted {resolved_path} from cache")
                     
                     if event is not None:
                         await queue.put(event)
     
                     continue
     
-                if self.cache.get(resolved_path) is None:
-                    logger.info(f"Watching {resolved_path}")
-                    self.cache[resolved_path] = b""
-    
                 try:
-                    async with open(resolved_path, 'rb') as file:
-                        if self.current_file is None:
-                            self.current_file = resolved_path
-                            self.current_file_bytes = await file.read()
+                    new_file = await File.read(resolved_path)
+                    
+                    if self.cache.get(resolved_path) is None:
+                        logger.info(f"New file found: {format_file(new_file)} ")
+                        self.cache[resolved_path] = File(
+                            resolved_path,
+                            b"",
+                            0
+                        )
+                    
+                    if self.current_file is None:
+                        self.current_file = new_file
                         
-                        if self.current_file != resolved_path:
-                            event = process_file_change(
-                                filename=resolved_path,
-                                new_file=await file.read(),
-                                old_file=self.cache[resolved_path],
-                                time=time.time(),
-                                env=self.env
-                            )
-                            
-                            if event is not None:
-                                await queue.put(event)
-                                
-                            self.current_file = resolved_path
-                            self.current_file_bytes = await file.read()
+                        continue
+                    
+                    if self.current_file.path != resolved_path:
+                        logger.debug(f"File changed (was {self.current_file.path}, now {resolved_path})")
+                        event = process_file_change(
+                            new_file=new_file,
+                            old_file=self.cache[resolved_path],
+                            time=time.time(),
+                            env=self.env
+                        )
                         
-                            # Update the file in the cache
-                            self.cache[resolved_path] = await file.read()
+                        if event is not None:
+                            await queue.put(event)
+                        
+                        self.cache[resolved_path] = new_file
+                        
+                    self.current_file = new_file
                 
                 except OSError as e:
                     if Path(resolved_path).is_dir():
@@ -139,12 +158,9 @@ class FileWatcher(Watcher):
     
     async def resolve_events(self) -> AsyncGenerator[Event, None]:
         if self.current_file is not None:
-            assert self.current_file_bytes
-            
             event = process_file_change(
-                filename=self.current_file,
-                new_file=self.current_file_bytes,
-                old_file=self.cache[self.current_file],
+                new_file=self.current_file,
+                old_file=self.cache[self.current_file.path],
                 time=time.time(),
                 env=self.env
             )
@@ -152,8 +168,6 @@ class FileWatcher(Watcher):
             if event is not None:
                 yield event
             
-            self.current_file = None
-            self.current_file_bytes = None
             
-            # Update the file in the cache
-            self.cache[resolved_path] = await file.read()
+            self.cache[self.current_file.path] = self.current_file
+            self.current_file = None

@@ -24,13 +24,14 @@ TEMPLATE = """
 
 [meta]
 version = 1
+watchers = ['files']
 
 [files]
 include = {include}  # files to include in tracking
 exclude = {exclude}  # files to exclude in tracking
 exclude_files = {exclude_files}  # files whose contents will be used to exclude other files from tracking
 exclude_binary_files = true  # whether to ignore binary files
-language_mapping = {".kicad_sch" = "Kicad Schematic"} # custom language mapping, have the extension as the key and the language name as the value. You can also deal with this in the online dashboard instead.
+language_mapping = {{".kicad_sch" = "Kicad Schematic"}} # custom language mapping, have the extension as the key and the language name as the value. You can also deal with this in the online dashboard instead.
 
 [project]
 name = "{name}"  # your project name
@@ -40,21 +41,31 @@ app = typer.Typer(
     pretty_exceptions_enable=False  # they don't report asyncio taskgroup exceptions correctly
 )
 
+try:
+    from rich.highlighter import Highlighter
+    from rich.text import Text
+    
+    class NoHighlights(Highlighter):
+        def highlight(self, text: Text) -> None:
+            pass
+except ImportError:
+    pass
+
 
 def setup_logging(is_verbose: bool):
     try:
         from rich.logging import RichHandler
         logging.basicConfig(
             level="DEBUG" if is_verbose else "INFO",
-            format="[bold magenta]{module}[/bold magenta][bright_black]:{funcName}@{lineno}[/bright_black]  {message}",
+            format="[bold magenta]{module}[/bold magenta][bright_black]:{funcName}@{lineno:03}[/bright_black]  {message}",
             style='{',
             datefmt="[%X]",
-            handlers=[RichHandler(rich_tracebacks=True, markup=True, show_time=False, show_path=False)]
+            handlers=[RichHandler(highlighter=NoHighlights(), rich_tracebacks=True, markup=True, show_time=False, show_path=False)]
         )
     except ImportError:
         logging.basicConfig(
             level="DEBUG" if is_verbose else "INFO",
-            format="{levelname} {filename}:{funcName}@{lineno} {message}",
+            format="{levelname} {filename}:{funcName}@{lineno:03} {message}",
             style='{',
             datefmt="[%X]"
         )
@@ -88,6 +99,48 @@ def test(verbose: Verbose = False):
 @app.command()
 def track(verbose: Verbose = False):
     start(False)
+    
+
+def prompt(prompt, default: str | None = None):
+    try:
+        from rich import get_console
+        return get_console().input(f"[bold magenta]{prompt}[/bold magenta] [cyan](default {default})[/cyan]\n[bright_cyan]>>> [bright_cyan]") or default
+    except ImportError:
+        return input(f"{prompt}\n>>> ") or default
+
+
+def prompt_choices(prompt, choices, default):
+    try:
+        from rich import get_console
+        response = get_console().input(f"[bold magenta]{prompt} {repr(choices)}[/bold magenta] [cyan](default {default})[/cyan]\n[bright_cyan]>>> [bright_cyan]")
+    except ImportError:
+        response = input(f"{prompt} {repr(choices)} (default {default})\n>>> ")
+    
+    if response == "":
+        return default
+    
+    if response in choices:
+        return response
+    else:
+        raise ValueError("response not allowed")
+
+
+def prompt_yn(prompt, default: bool):
+    prompt_str = "[Y/n]" if default else "[y/N]"
+    
+    try:
+        from rich import get_console
+        response = get_console().input(f"[bold magenta]{prompt}[/bold magenta] [cyan]\\{prompt_str}: [cyan]")
+    except ImportError:
+        response = input(f"{prompt} {prompt_str}: ")
+        
+    if response == "":
+        return default
+    
+    if response.lower() not in ("y", "n"):
+        raise ValueError("expected y or n")
+    
+    return response.lower() == "y"
 
 
 @app.command()
@@ -96,24 +149,26 @@ def setup():
     if output.exists():
         raise Exception("a wak.toml already exists in this directory")
         
-    project_name = typer.prompt("What's your project name?", default=Path("./").absolute().name)
+    project_type = prompt_choices("What kind of project do you have?", ["files"], "files")
+        
+    project_name = prompt("What's your project name?", default=Path("./").absolute().name)
     
     included_paths = list()
-    if typer.confirm("Would you like to watch all files in the directory?", default=True):
+    if prompt_yn("Would you like to watch all files in the directory?", True):
         included_paths.append("*")
-    elif typer.confirm("Would you like to add include paths?"):
+    elif prompt_yn("Would you like to add include paths?", True):
         while True:
-            included_paths.append(typer.prompt("Please enter a path to include in gitignore format (e.g /src)"))
+            included_paths.append(prompt("Please enter a path to include in gitignore format (e.g /src)"))
             
-            if not typer.confirm("Would you like to add another include path?"):
+            if not prompt_yn("Would you like to add another include path?", True):
                 break
     
     excluded_paths = list()
-    if typer.confirm("Would you like to add exclude paths?"):
+    if prompt_yn("Would you like to add exclude paths?", False):
         while True:
-            excluded_paths.append(typer.prompt("Please enter a path to exclude in gitignore format (e.g /node_modules)"))
+            excluded_paths.append(prompt("Please enter a path to exclude in gitignore format (e.g /node_modules)"))
             
-            if not typer.confirm("Would you like to add another exclude path?"):
+            if not prompt_yn("Would you like to add another exclude path?", False):
                 break
     
     exclude_files = []

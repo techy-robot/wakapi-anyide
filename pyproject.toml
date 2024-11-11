@@ -1,6 +1,6 @@
 [project]
 name = "wakapi-anyide"
-version = "0.5.3"
+version = "0.6.3"
 description = "Time tracking for any IDE with WakaTime-like servers"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -29,6 +29,9 @@ dependencies = [
     "pathspec~=0.12.1"
 ]
 
+[project.optional-dependencies]
+color = ["rich~=13.9.4"]
+
 [project.scripts]
 wakapi-anyide = "wakapi_anyide.__main__:app"
 
@@ -41,9 +44,7 @@ module-name = "wakapi_anyide._rust"
 venvPath = "."
 venv = ".venv"
 reportMissingModuleSource = false
-reportUnusedExpression = true
 reportUnusedImport = true
-executionEnvironments = [{root = "python/"}]
 
 [build-system]
 requires = ["maturin>=1.0,<2.0"]

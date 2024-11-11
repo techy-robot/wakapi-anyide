@@ -11,7 +11,7 @@ Log your coding time against any WakaTime-like server.
 ## Alternatives
 
 You should try use an [editor extension](https://wakatime.com/plugins) over wakapi-anyide if you can.
-If you don't need precise coding metrics, use the [WakaTime app](https://wakatime.com/linux) instead. (Not for High Seas!)
+If you don't need precise coding metrics, use the [WakaTime app](https://wakatime.com/linux) instead. The WakaTime app does not work with High Seas.
 
 ## Quickstart guide for most IDEs
 These instructions are best run in an existing project.
@@ -24,7 +24,7 @@ These instructions are best run in an existing project.
   However, anything under your editor timeout preference in your WakaTime settings is fine.
   For High Seas, it **must** be under two minutes.
 
-- Install `wakapi-anyide` with your favourite Python package manager (try `pipx install wakapi-anyide`)
+- Install `wakapi-anyide` with your favourite Python package manager (try `pipx install wakapi-anyide[color]` to install with colour support!)
 
 - Run `wakapi-anyide setup` and follow the instructions.  
   The **included paths** are the paths that wakapi-anyide will watch for changes.  
@@ -34,7 +34,7 @@ These instructions are best run in an existing project.
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.5.3
+  # https://github.com/iamawatermelo/wakapi-anyide v0.6.3
   
   [wakapi-anyide]
   version = 1  # don't change this
@@ -44,6 +44,7 @@ These instructions are best run in an existing project.
   exclude = ["/.venv"]  # files to exclude in tracking (ie /node_modules)
   exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
   exclude_binary_files = true
+  
   
   [project]
   name = "wakapi-anyide"  # your project name
@@ -124,3 +125,7 @@ File changes are reported specially:
 - they are appended with `#wakapi-anyide-binary` in tracking
 - cursor position is set to the last change in the binary file
 - the line count are set to the binary diff count
+
+### Large files
+
+For performance reasons, files which are larger than 64 KiB will only report changes in filesize.
