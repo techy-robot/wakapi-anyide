@@ -53,7 +53,7 @@ def setup_logging(is_verbose: bool):
         from rich.logging import RichHandler
         logging.basicConfig(
             level="DEBUG" if is_verbose else "INFO",
-            format="[bold magenta]{module}[/bold magenta][bright_black]:{funcName}@{lineno}[/bright_black]  {message}",
+            format="[bold magenta]{module}[/bold magenta][bright_black]:{funcName}@{lineno:03}[/bright_black]  {message}",
             style='{',
             datefmt="[%X]",
             handlers=[RichHandler(highlighter=NoHighlights(), rich_tracebacks=True, markup=True, show_time=False, show_path=False)]
@@ -61,7 +61,7 @@ def setup_logging(is_verbose: bool):
     except ImportError:
         logging.basicConfig(
             level="DEBUG" if is_verbose else "INFO",
-            format="{levelname} {filename}:{funcName}@{lineno} {message}",
+            format="{levelname} {filename}:{funcName}@{lineno:03} {message}",
             style='{',
             datefmt="[%X]"
         )
