@@ -11,7 +11,7 @@ Log your coding time against any WakaTime-like server.
 ## Alternatives
 
 You should try use an [editor extension](https://wakatime.com/plugins) over wakapi-anyide if you can.
-If you don't need precise coding metrics, use the [WakaTime app](https://wakatime.com/linux) instead. (Not for High Seas!)
+If you don't need precise coding metrics, use the [WakaTime app](https://wakatime.com/linux) instead. The WakaTime app does not work with High Seas.
 
 ## Quickstart guide for most IDEs
 These instructions are best run in an existing project.
@@ -24,7 +24,7 @@ These instructions are best run in an existing project.
   However, anything under your editor timeout preference in your WakaTime settings is fine.
   For High Seas, it **must** be under two minutes.
 
-- Install `wakapi-anyide` with your favourite Python package manager (try `pipx install wakapi-anyide`)
+- Install `wakapi-anyide` with your favourite Python package manager (try `pipx install wakapi-anyide[color]` to install with colour support!)
 
 - Run `wakapi-anyide setup` and follow the instructions.  
   The **included paths** are the paths that wakapi-anyide will watch for changes.  
