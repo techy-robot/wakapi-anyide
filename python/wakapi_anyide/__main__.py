@@ -1,18 +1,18 @@
 import asyncio
+import logging
+import time
 from json import dumps
 from pathlib import Path
-import time
-import logging
+from typing import Annotated
 from typing import TypeAlias
-from typing_extensions import Annotated
 
 import typer
 from wakapi_anyide import __version__
-from wakapi_anyide.runner import ConfigInvalidatedException
-from wakapi_anyide.runner import run
 from wakapi_anyide.models.config import WakatimeConfig
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.models.project import Project
+from wakapi_anyide.runner import ConfigInvalidatedException
+from wakapi_anyide.runner import run
 
 logger = logging.getLogger(__name__)
 

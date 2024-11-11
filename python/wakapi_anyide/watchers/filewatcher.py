@@ -1,14 +1,15 @@
 import asyncio
-from asyncio.queues import Queue
-from asyncio.taskgroups import TaskGroup
-from asyncio import Task
 import base64
 import difflib
+import logging
 import os
 import re
 import time
-import logging
+from asyncio import Task
+from asyncio.queues import Queue
+from asyncio.taskgroups import TaskGroup
 from collections import deque
+from collections.abc import AsyncIterator
 from collections.abc import Iterator
 from dataclasses import dataclass
 from functools import partial
@@ -19,7 +20,7 @@ from os.path import dirname
 from pathlib import Path
 from platform import uname
 from re import Pattern
-from typing import AsyncIterator, Dict
+from typing import Dict
 from typing import List
 from typing import Set
 from typing import Tuple
@@ -33,7 +34,8 @@ from wakapi_anyide._rust.watch import Watch
 from wakapi_anyide._rust.watch import WatchEventType
 from wakapi_anyide.helpers.filediffer import process_file_change
 from wakapi_anyide.models.environment import Environment
-from wakapi_anyide.watchers.types import Watcher, Event
+from wakapi_anyide.watchers.types import Event
+from wakapi_anyide.watchers.types import Watcher
 
 logger = logging.getLogger()
 

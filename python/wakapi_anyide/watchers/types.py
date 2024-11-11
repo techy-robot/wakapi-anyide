@@ -1,7 +1,10 @@
 import asyncio
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from typing import Protocol
+from typing import Tuple
+
 from wakapi_anyide.models.environment import Environment
-from typing import AsyncIterator, Protocol, Tuple
 
 
 @dataclass

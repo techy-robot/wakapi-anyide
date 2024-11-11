@@ -1,18 +1,25 @@
-from asyncio import Future, Queue, TaskGroup
 import asyncio
 import base64
-from hashlib import sha256
 import logging
+import time
+from asyncio import Future
+from asyncio import Queue
+from asyncio import TaskGroup
+from collections.abc import Sequence
+from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from platform import uname
-import time
-from typing import Dict, List, Sequence, Tuple
-from dataclasses import dataclass
+from typing import Dict
+from typing import List
+from typing import Tuple
 
-from aiohttp import ClientResponse, request
+from aiohttp import ClientResponse
+from aiohttp import request
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.filewatcher import FileWatcher
-from wakapi_anyide.watchers.types import Watcher, Event
+from wakapi_anyide.watchers.types import Event
+from wakapi_anyide.watchers.types import Watcher
 
 logger = logging.getLogger(__name__)
 
@@ -127,4 +134,4 @@ async def run(env: Environment):
         task = ev.create_task(heartbeat_task(env, emit_events, runners, should_shutdown))
     
     should_shutdown.set()
-    await task    
+    await task
