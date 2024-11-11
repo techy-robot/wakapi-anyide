@@ -18,17 +18,6 @@ permissions:
   contents: read
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: |
-          pipx install reorder-python-imports
-          reorder-python-imports --py312-plus python/wakapi_anyide/**/*.py
-  
   test:
     runs-on: ubuntu-latest
     steps:
@@ -36,11 +25,17 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: |
-          pipx install hatch
+      - name: Test that the program runs
+        run: |
+          pip install hatch
           hatch build
           pip install dist/*.whl
-          wakapi-anyide
+          wakapi-anyide --help
+      - name: Ensure imports are formatted correctly
+        run: |
+          hatch run pip install reorder-python-imports==3.14.0
+          hatch run reorder-python-imports --application-directories=python/ --py312-plus python/wakapi_anyide/**/*.py --exit-zero-even-if-changed
+          git diff --exit-code
   
   linux:
     runs-on: ${{ matrix.platform.runner }}
@@ -149,7 +144,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
-    needs: [linux, windows, macos, sdist, lint, test]
+    needs: [linux, windows, macos, sdist, test]
     permissions:
       # Use to sign the release artifacts
       id-token: write

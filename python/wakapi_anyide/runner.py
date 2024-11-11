@@ -2,12 +2,13 @@ import asyncio
 import base64
 import logging
 import time
+from asyncio import CancelledError
 from asyncio import Future
 from asyncio import Queue
+from asyncio import Task
 from asyncio import TaskGroup
 from collections.abc import Sequence
 from hashlib import sha256
-from pathlib import Path
 from platform import uname
 from typing import Dict
 
@@ -15,6 +16,7 @@ from aiohttp import ClientResponse
 from aiohttp import request
 
 from wakapi_anyide.models.environment import Environment
+from wakapi_anyide.watchers import WATCHERS
 from wakapi_anyide.watchers.filewatcher import FileWatcher
 from wakapi_anyide.watchers.types import Event
 from wakapi_anyide.watchers.types import Watcher
@@ -28,10 +30,11 @@ class ConfigInvalidatedException(Exception):
 
 async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequence[Watcher], should_shutdown: asyncio.Event):
     next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
-    changed_events: Dict[str, Event] = dict()
     fut: Future[Event] | None = None
 
     while not should_shutdown.is_set():
+        changed_events: Dict[str, Event] = dict()
+        
         while (due := next_heartbeat_due - time.time()) > 0 and not should_shutdown.is_set():
             if fut is None or fut.done():
                 fut = asyncio.create_task(queue.get())
@@ -60,12 +63,12 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             iterable = watcher.resolve_events()
             logger.debug(f"Maybe iterable is {iterable}")
             
-            if iterable is None:
-                continue
-            
-            async for event in iterable:
-                changed_events[event.filename] = event
-                logger.debug(f"Got event for {event.filename}")
+            if iterable is not None:           
+                async for event in iterable:
+                    changed_events[event.filename] = event
+                    logger.debug(f"Got event for {event.filename}")
+        
+        logger.debug(changed_events)
         
         if len(changed_events) == 0:
             logger.debug(f"No changes detected.")
@@ -84,7 +87,7 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             "category": "coding",
             "time": event.time,
             "project": env.project.project.name,
-            **({"language": languageProcessor(env, event.filename)} if languageProcessor(env, event.filename) is not None else {}), # dict comprehension, only include language if it's custom defined, otherwise let Wakatime determine,
+            "language": language_processor(env, event.file_extension),
             "lines": event.lines,
             "is_write": True,
             "editor": "wakapi-anyide",
@@ -113,30 +116,46 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
         else:
             raise Exception(f"Failed to send heartbeat: {response.status} {last_text}")
 
-def languageProcessor(env: Environment, filename: str):
-    try: 
-        languages = env.project.files.language_mapping
-    except AttributeError:
-        return None
+
+def language_processor(env: Environment, file_extension: str) -> str:
+    languages = env.project.files.language_mapping
+
+    lang = languages.get(file_extension)  # If the suffix matches a defined one in the languages table
+    if lang is None:
+        return file_extension.replace(".", "")  # If it didn't find a match, return the suffix only
+    return lang
     
-    suffix = Path(filename).suffix
-    for x, lang in languages.items():
-        if suffix == x: # If the suffix matches the defined one in the languages table
-            return lang
-    return None
     
 async def run(env: Environment):
     ev = asyncio.get_event_loop()
-    runners = [FileWatcher(env)]
+    runners = [WATCHERS[watcher](env) for watcher in env.project.meta.watchers]
     emit_events: Queue[Event] = Queue()
     should_shutdown = asyncio.Event()
     task: Future
     
-    async with TaskGroup() as tg:
-        for runner in runners:
-            await runner.setup(tg, emit_events)
+    try:
+        async with TaskGroup() as tg:
+            for runner in runners:
+                await runner.setup(tg, emit_events)
             
-        task = ev.create_task(heartbeat_task(env, emit_events, runners, should_shutdown))
+            async def throw_exception(exc):
+                raise exc
+            
+            task = ev.create_task(heartbeat_task(env, emit_events, runners, should_shutdown))
+            
+            def done_callback(task: Task):
+                try:
+                    exc = task.exception()
+                except CancelledError:
+                    return
+                
+                if exc is not None and type(exc) not in (CancelledError, KeyboardInterrupt):
+                    print(exc)
+                    tg.create_task(throw_exception(exc))
+        
+            task.add_done_callback(done_callback)
+    except KeyboardInterrupt:
+        pass
     
     should_shutdown.set()
     await task

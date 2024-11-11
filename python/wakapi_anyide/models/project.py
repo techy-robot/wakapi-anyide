@@ -9,6 +9,7 @@ from pydantic_settings.main import SettingsConfigDict
 
 class ProjectMeta(BaseModel):
     version: Literal[1]
+    watchers: List[str] = ['files']
 
 
 class ProjectFiles(BaseModel):
@@ -16,7 +17,7 @@ class ProjectFiles(BaseModel):
     exclude: List[str]
     exclude_files: List[str]
     exclude_binary_files: bool = True
-    language_mapping: dict
+    language_mapping: dict = {}
 
 
 class ProjectDescription(BaseModel):

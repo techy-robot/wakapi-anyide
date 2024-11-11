@@ -10,6 +10,7 @@ from wakapi_anyide.models.environment import Environment
 @dataclass
 class Event:
     filename: str
+    file_extension: str
     checksum: bytes
     lines: int
     time: float

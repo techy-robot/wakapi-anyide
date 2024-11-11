@@ -1,26 +1,69 @@
 import difflib
 import logging
+from dataclasses import dataclass
+from pathlib import Path
+
+from aiofiles import open
+from aiofiles.ospath import getsize
 
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
 
 logger = logging.getLogger(__name__)
 
-def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: float, env: Environment) -> Event | None:
+SIZE_MAX = 2**16
+
+
+@dataclass
+class File:
+    path: str
+    body: bytes
+    size: int
     
-    if len(new_file) > 2**16 or len(old_file) > 2**16:
-        diff = len(new_file) - len(old_file)
+    @property
+    def too_large(self):
+        return self.size > SIZE_MAX
+    
+    @classmethod
+    async def read(cls, path: str):
+        size = await getsize(path)
+        
+        if size > SIZE_MAX:
+            return cls(
+                path,
+                b"",
+                size
+            )
+        else:
+            async with open(path, 'rb') as file:
+                return cls(
+                    path,
+                    await file.read(),
+                    size
+                )
+
+
+def process_file_change(new_file: File, old_file: File, time: float, env: Environment) -> Event | None:
+    filename = new_file.path
+    file_extension = Path(new_file.path).suffix
+    
+    if new_file.too_large or old_file.too_large:
+        diff = new_file.size - old_file.size
+        lines_added = max(0, diff)
+        lines_removed = -min(0, diff)
         
         return Event(
-            filename=filename,
+            filename=f"{filename}#wakapi-anyide-toolarge",
+            file_extension=file_extension,
+            lines=new_file.size,
             checksum=sha256(new_file).digest(),
             lines=len(new_file),
             time=time
         )
     
     try:
-        new_file_str = new_file.decode()
-        old_file_str = old_file.decode()
+        new_file_str = new_file.body.decode()
+        old_file_str = old_file.body.decode()
 
         last_index = 0
         for op in difflib.SequenceMatcher(a=old_file_str, b=new_file_str, autojunk=False).get_opcodes():
@@ -57,6 +100,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
 
         return Event(
             filename=filename,
+            file_extension=file_extension,
             checksum=sha256(new_file).digest(),
             lines=len(new_file_lines),
             time=time
@@ -69,7 +113,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
         added_lines = 0
         deleted_lines = 0
         last_index = 0
-        for op in difflib.SequenceMatcher(a=old_file, b=new_file, autojunk=False).get_opcodes():
+        for op in difflib.SequenceMatcher(a=old_file.body, b=new_file.body, autojunk=False).get_opcodes():
             match op:
                 case ('replace', i1, i2, j1, j2):
                     added_lines += j2 - j1
@@ -88,7 +132,9 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
 
         return Event(
             filename=filename,
-            checksum=sha256(new_file).digest(),
             lines=len(new_file),
+            checksum=sha256(new_file).digest(),
+            lines=len(new_file.body),
+            file_extension=f"{filename}#wakapi-anyide-binaryfile", # custom handling for binary files
             time=time
         )
