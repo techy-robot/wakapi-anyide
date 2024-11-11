@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Annotated
 from typing import TypeAlias
 
-from rich.console import Console
 from rich.highlighter import Highlighter
 from rich.text import Text
 import typer
