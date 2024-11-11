@@ -23,7 +23,7 @@ include = {include}  # files to include in tracking
 exclude = {exclude}  # files to exclude in tracking
 exclude_files = {exclude_files}  # files whose contents will be used to exclude other files from tracking
 exclude_binary_files = true  # whether to ignore binary files
-language_mapping = {".kicad_sch": "Kicad Schematic"} # custom language mapping, have the extension as the key and the language name as the value. You can also deal with this in the online dashboard instead.
+language_mapping = {".kicad_sch" = "Kicad Schematic"} # custom language mapping, have the extension as the key and the language name as the value. You can also deal with this in the online dashboard instead.
 
 [project]
 name = "{name}"  # your project name

@@ -208,12 +208,16 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             raise Exception(f"Failed to send heartbeat: {response.status} {last_text}")
 
 def languageProcessor(env: Environment, filename: str):
-    languages = env.project.files.language_mapping
+    try: 
+        languages = env.project.files.language_mapping
+    except AttributeError:
+        return None
+    
     suffix = Path(filename).suffix
-    for x, lang in languages:
+    for x, lang in languages.items():
         if suffix == x: # If the suffix matches the defined one in the languages table
             return lang
-    return suffix
+    return None
 
 def normalise(path: Path):
     return f"./{(path.relative_to(Path('./').absolute()))}"
