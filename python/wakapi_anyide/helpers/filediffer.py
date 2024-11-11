@@ -1,9 +1,10 @@
-from dataclasses import dataclass
 import difflib
 import logging
+from dataclasses import dataclass
+from pathlib import Path
+
 from aiofiles import open
 from aiofiles.ospath import getsize
-from pathlib import Path
 
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event

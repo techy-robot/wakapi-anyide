@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Annotated
 from typing import TypeAlias
 
+import typer
 from rich.highlighter import Highlighter
 from rich.text import Text
-import typer
 
 from wakapi_anyide import __version__
 from wakapi_anyide.models.config import WakatimeConfig
