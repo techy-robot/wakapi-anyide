@@ -64,6 +64,7 @@ async def main(env: Environment):
     try:
         await watcher(env, queue, cache)
     finally:
+        print("Shutting down!")
         shutdown_flag.set()
         await fut
 
@@ -135,6 +136,7 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
             )
         except UnicodeDecodeError:
             if ignore_binary:
+                print(f"Ignored file {event.filename}")
                 return
 
             added_lines = 0
@@ -173,10 +175,12 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
 async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent], flag: asyncio.Event, cache_lock: MutexDict[str, bytes]):
     next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
     changed_files: Dict[str, UnresolvedChangeEvent] = dict()
+    fut: asyncio.Future[UnresolvedChangeEvent] | None = None
 
     while not flag.is_set():
         while next_heartbeat_due - time.time() > 0 and not flag.is_set():
-            fut = asyncio.create_task(queue.get())
+            if fut is None or fut.done():
+                fut = asyncio.create_task(queue.get())
             completed, rest = await asyncio.wait([
                 fut,
                 asyncio.create_task(flag.wait())
@@ -296,6 +300,7 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
 
     async for ev_list in watch:
         for event in ev_list:
+            print(event)
             resolved_path = normalise(Path(event.target))
             
             if resolved_path == "./wak.toml":
@@ -303,27 +308,24 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
 
             if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
                 continue
-
-            match event.kind:
-                case WatchEventType.Delete:
-                    if cache_lock.read().get(resolved_path) is None:
-                        continue
-
-                    await queue.put(UnresolvedChangeEvent(
-                        filename=resolved_path,
-                        file=b"",
-                        time=time.time()
-                    ))
-
+            
+            if event.kind == WatchEventType.Delete:
+                if cache_lock.read().get(resolved_path) is None:
+                    print(f"Not in cache, so deletion for {resolved_path} ignored")
                     continue
 
-                case WatchEventType.Create:
-                    if cache_lock.read().get(resolved_path) is None:
-                        async with cache_lock as cache:
-                            cache[resolved_path] = b""
+                await queue.put(UnresolvedChangeEvent(
+                    filename=resolved_path,
+                    file=b"",
+                    time=time.time()
+                ))
 
-                case WatchEventType.Modify:
-                    pass
+                continue
+
+            if cache_lock.read().get(resolved_path) is None:
+                async with cache_lock as cache:
+                    print(f"Cached {resolved_path}")
+                    cache[resolved_path] = b""
 
             try:
                 async with open(resolved_path, 'rb') as file:

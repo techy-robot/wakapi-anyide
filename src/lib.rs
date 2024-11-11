@@ -181,12 +181,13 @@ mod _watch {
                     _py.allow_threads(move || {
                         thread::spawn(move || {
                             let result = rx.recv();
+                            let lock = slf.get().rx.lock();
                             
                             Python::with_gil(move |_py| {
                                 let task = task.bind(_py);
                                 let evloop = evloop.bind(_py);
                                 
-                                match slf.bind(_py).get().rx.lock() {
+                                match lock {
                                     Ok(rx_cell) => {
                                         rx_cell.replace(Some(rx));
                                         drop(rx_cell);
