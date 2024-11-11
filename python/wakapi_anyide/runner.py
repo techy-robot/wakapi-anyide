@@ -60,12 +60,12 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             iterable = watcher.resolve_events()
             logger.debug(f"Maybe iterable is {iterable}")
             
-            if iterable is None:
-                continue
-            
-            async for event in iterable:
-                changed_events[event.filename] = event
-                logger.debug(f"Got event for {event.filename}")
+            if iterable is not None:           
+                async for event in iterable:
+                    changed_events[event.filename] = event
+                    logger.debug(f"Got event for {event.filename}")
+        
+        logger.debug(changed_events)
         
         if len(changed_events) == 0:
             logger.debug(f"No changes detected.")

@@ -152,8 +152,8 @@ class FileWatcher(Watcher):
             if event is not None:
                 yield event
             
+            
+            self.cache[self.current_file] = self.current_file_bytes
+            
             self.current_file = None
             self.current_file_bytes = None
-            
-            # Update the file in the cache
-            self.cache[resolved_path] = await file.read()
