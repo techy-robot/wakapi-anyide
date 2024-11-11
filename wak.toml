@@ -1,11 +1,11 @@
 [meta]
-version = 1                                             # don't change this
+version = 1  # don't change this
 
 [files]
-include = ["/python/**/*.py", "/*.toml", "/src/**/*.rs"]   # files to include in tracking
-exclude = [".venv/**/*"]                                # files to exclude in tracking
-exclude_files = [".gitignore"]                          # files whose contents will be used to exclude other files from tracking
-exclude_binary_files = true
+include = ["/python/**/*.py", "/*.toml", "/src/**/*.rs", "/python/**/*.bin"]  # files to include in tracking
+exclude = [".venv/**/*"]  # files to exclude in tracking
+exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
+exclude_binary_files = false
 
 [project]
-name = "wakatime-anyide"                                # your project name
+name = "wakatime-anyide"  # your project name
