@@ -20,7 +20,7 @@ from os.path import dirname
 from pathlib import Path
 from platform import uname
 from re import Pattern
-from typing import Dict
+from typing import AsyncGenerator, Dict
 from typing import List
 from typing import Set
 from typing import Tuple
@@ -150,7 +150,7 @@ class FileWatcher(Watcher):
     async def shutdown(self):
         pass
     
-    async def resolve_events(self) -> AsyncIterator[Event] | None:
+    async def resolve_events(self) -> AsyncGenerator[Event]:
         if self.current_file is not None:
             assert self.current_file_bytes
             

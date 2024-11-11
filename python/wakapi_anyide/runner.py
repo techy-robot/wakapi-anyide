@@ -63,7 +63,7 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             logger.debug(f"Maybe iterable is {iterable}")
             
             if iterable is None:
-                continueaa
+                continue
             
             async for event in iterable:
                 changed_events[event.filename] = event
