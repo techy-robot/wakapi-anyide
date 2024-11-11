@@ -84,7 +84,7 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             "category": "coding",
             "time": event.time,
             "project": env.project.project.name,
-            **({"language": languageProcessor(env, event.filename)} if languageProcessor(env, event.filename) is not None else {}), # dict comprehension, only include language if it's custom defined, otherwise let Wakatime determine,
+            "language": languageProcessor(env, event.filename),
             "lines": event.lines,
             "line_additions": event.lines_added,
             "line_deletions": event.lines_removed,
@@ -118,16 +118,13 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             raise Exception(f"Failed to send heartbeat: {response.status} {last_text}")
 
 def languageProcessor(env: Environment, filename: str):
-    try: 
-        languages = env.project.files.language_mapping
-    except AttributeError:
-        return None
+    languages = env.project.files.language_mapping
     
     suffix = Path(filename).suffix
-    for x, lang in languages.items():
+    for x in languages.keys():
         if suffix == x: # If the suffix matches the defined one in the languages table
-            return lang
-    return None
+            return languages.get(suffix)
+    return suffix.replace(".", "") # If not, return the suffix
     
 async def run(env: Environment):
     ev = asyncio.get_event_loop()
