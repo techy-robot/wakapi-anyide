@@ -1,15 +1,22 @@
 import asyncio
+import logging
+import time
 from json import dumps
 from pathlib import Path
-import time
+from typing import Annotated
+from typing import TypeAlias
 
 import typer
+
 from wakapi_anyide import __version__
-from wakapi_anyide.cli import ConfigInvalidatedException
-from wakapi_anyide.cli import main
 from wakapi_anyide.models.config import WakatimeConfig
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.models.project import Project
+from wakapi_anyide.runner import ConfigInvalidatedException
+from wakapi_anyide.runner import run
+
+logger = logging.getLogger(__name__)
+
 
 DEFAULT_IGNOREFILES = [".gitignore"]
 TEMPLATE = """
@@ -29,19 +36,44 @@ language_mapping = {".kicad_sch" = "Kicad Schematic"} # custom language mapping,
 name = "{name}"  # your project name
 """
 
-app = typer.Typer()
+app = typer.Typer(
+    pretty_exceptions_enable=False  # they don't report asyncio taskgroup exceptions correctly
+)
 
 
-def run(is_test):
+def setup_logging(is_verbose: bool):
+    try:
+        from rich.logging import RichHandler
+        logging.basicConfig(
+            level="DEBUG" if is_verbose else "INFO",
+            format="[bold magenta]{module}[/bold magenta][bright_black]:{funcName}@{lineno}[/bright_black]  {message}",
+            style='{',
+            datefmt="[%X]",
+            handlers=[RichHandler(rich_tracebacks=True, markup=True, show_time=False, show_path=False)]
+        )
+    except ImportError:
+        logging.basicConfig(
+            level="DEBUG" if is_verbose else "INFO",
+            format="{levelname} {filename}:{funcName}@{lineno} {message}",
+            style='{',
+            datefmt="[%X]"
+        )
+        logger.warning("Rich is not available, using basic logging (pip install rich?)")
+
+
+Verbose: TypeAlias = Annotated[bool, typer.Option("--verbose", callback=setup_logging)]
+
+
+def start(is_test):
     while True:
         try:
-            asyncio.run(main(Environment(
+            asyncio.run(run(Environment(
                 is_test_only=is_test,
                 config=WakatimeConfig(),  # type: ignore
                 project=Project()  # type: ignore
             )))
         except ConfigInvalidatedException:
-            print(f"Detected config change, restarting in 1s")
+            logger.warning(f"Detected config change, restarting in 1s")
             time.sleep(1)
             continue
         except KeyboardInterrupt:
@@ -49,13 +81,13 @@ def run(is_test):
 
 
 @app.command()
-def test():
-    run(True)
+def test(verbose: Verbose = False):
+    start(True)
 
 
 @app.command()
-def track():
-    run(False)
+def track(verbose: Verbose = False):
+    start(False)
 
 
 @app.command()

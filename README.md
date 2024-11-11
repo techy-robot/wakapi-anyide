@@ -13,7 +13,7 @@ Log your coding time against any WakaTime-like server.
 You should try use an [editor extension](https://wakatime.com/plugins) over wakapi-anyide if you can.
 If you don't need precise coding metrics, use the [WakaTime app](https://wakatime.com/linux) instead. (Not for High Seas!)
 
-## Quickstart guide
+## Quickstart guide for most IDEs
 These instructions are best run in an existing project.
 
 - Create a `.wakatime.cfg` file if you don't already have one.
@@ -34,7 +34,7 @@ These instructions are best run in an existing project.
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.4.2
+  # https://github.com/iamawatermelo/wakapi-anyide v0.5.2
   
   [wakapi-anyide]
   version = 1  # don't change this
