@@ -7,6 +7,7 @@ from typing import Annotated
 from typing import TypeAlias
 
 import typer
+
 from wakapi_anyide import __version__
 from wakapi_anyide.models.config import WakatimeConfig
 from wakapi_anyide.models.environment import Environment

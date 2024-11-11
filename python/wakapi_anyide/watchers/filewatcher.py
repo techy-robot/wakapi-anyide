@@ -1,11 +1,15 @@
+import logging
 import time
 from asyncio import Task
 from asyncio.queues import Queue
 from asyncio.taskgroups import TaskGroup
+from collections.abc import AsyncGenerator
 from pathlib import Path
+from typing import Dict
 
 from aiofiles import open
 from pathspec import PathSpec
+
 from wakapi_anyide._rust.watch import Watch
 from wakapi_anyide._rust.watch import WatchEventType
 from wakapi_anyide.helpers.filediffer import process_file_change
@@ -126,7 +130,7 @@ class FileWatcher(Watcher):
     async def shutdown(self):
         pass
     
-    async def resolve_events(self) -> AsyncGenerator[Event]:
+    async def resolve_events(self) -> AsyncGenerator[Event, None]:
         if self.current_file is not None:
             assert self.current_file_bytes
             
