@@ -121,8 +121,8 @@ class FileWatcher(Watcher):
                             self.current_file = resolved_path
                             self.current_file_bytes = await file.read()
                         
-                        # Update the file in the cache
-                        self.cache[resolved_path] = await file.read()
+                            # Update the file in the cache
+                            self.cache[resolved_path] = await file.read()
                 
                 except OSError as e:
                     if Path(resolved_path).is_dir():
@@ -154,3 +154,6 @@ class FileWatcher(Watcher):
             
             self.current_file = None
             self.current_file_bytes = None
+            
+            # Update the file in the cache
+            self.cache[resolved_path] = await file.read()
