@@ -6,33 +6,14 @@ from wakapi_anyide.watchers.types import Event
 
 logger = logging.getLogger(__name__)
 
-
-def index_to_linecol(file: str, index: int):
-    line = 0
-    col = 0
-
-    for character in file[:index]:
-        if character == '\n':
-            line += 1
-            col = 0
-        else:
-            col += 1
-
-    return line + 1, col + 1
-
-
 def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: float, env: Environment) -> Event | None:
     
     if len(new_file) > 2**16 or len(old_file) > 2**16:
         diff = len(new_file) - len(old_file)
-        lines_added = max(0, diff)
-        lines_removed = -min(0, diff)
         
         return Event(
             filename=filename,
-            cursor=(0, 0),
-            lines_added=lines_added,
-            lines_removed=lines_removed,
+            checksum=sha256(new_file).digest(),
             lines=len(new_file),
             time=time
         )
@@ -76,9 +57,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
 
         return Event(
             filename=filename,
-            cursor=(line, col),
-            lines_added=added_lines,
-            lines_removed=deleted_lines,
+            checksum=sha256(new_file).digest(),
             lines=len(new_file_lines),
             time=time
         )
@@ -109,9 +88,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
 
         return Event(
             filename=filename,
-            cursor=(1, last_index),
-            lines_added=added_lines,
-            lines_removed=deleted_lines,
+            checksum=sha256(new_file).digest(),
             lines=len(new_file),
             time=time
         )

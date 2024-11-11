@@ -62,7 +62,7 @@ class FileWatcher(Watcher):
             logger.info(f"- {resolved_path}")
             
             async with open(resolved_path, 'rb') as file:
-                self.cache[resolved_path] = await file.read()
+                self.cache[resolved_path] = sha256(await file.read()).digest()
     
         logger.info("Watching!")
     
@@ -104,12 +104,12 @@ class FileWatcher(Watcher):
                     async with open(resolved_path, 'rb') as file:
                         if self.current_file is None:
                             self.current_file = resolved_path
-                            self.current_file_bytes = await file.read()
+                            self.current_file_checksum = sha256(await file.read()).digest()
                         
                         if self.current_file != resolved_path:
                             event = process_file_change(
                                 filename=resolved_path,
-                                new_file=await file.read(),
+                                new_file=sha256(await file.read()).digest(),
                                 old_file=self.cache[resolved_path],
                                 time=time.time(),
                                 env=self.env
@@ -119,10 +119,10 @@ class FileWatcher(Watcher):
                                 await queue.put(event)
                                 
                             self.current_file = resolved_path
-                            self.current_file_bytes = await file.read()
+                            self.current_file_checksum = sha256(await file.read()).digest()
                         
                         # Update the file in the cache
-                        self.cache[resolved_path] = await file.read()
+                        self.cache[resolved_path] = sha256(await file.read()).digest()
                 
                 except OSError as e:
                     if Path(resolved_path).is_dir():
@@ -139,11 +139,11 @@ class FileWatcher(Watcher):
     
     async def resolve_events(self) -> AsyncGenerator[Event, None]:
         if self.current_file is not None:
-            assert self.current_file_bytes
+            assert self.current_file_checksum
             
             event = process_file_change(
                 filename=self.current_file,
-                new_file=self.current_file_bytes,
+                new_file=self.current_file_checksum,
                 old_file=self.cache[self.current_file],
                 time=time.time(),
                 env=self.env
@@ -153,4 +153,4 @@ class FileWatcher(Watcher):
                 yield event
             
             self.current_file = None
-            self.current_file_bytes = None
+            self.current_file_checksum = None
