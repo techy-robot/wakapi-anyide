@@ -29,6 +29,12 @@ def bytes_to_human(size: int):
             return f"{(size / (1024**i)):.2f} {suffix}"
     
     return f"{(size / 1024**6):.2f} PiB"
+    
+
+def format_file(file: File):
+    color = "red" if file.too_large else "bright_black"
+    extra = "  [yellow]Large file[/yellow]" if file.too_large else ""
+    return(f"{file.path}  [{color}]{bytes_to_human(file.size)}[/{color}]{extra}")
 
 
 class FileWatcher(Watcher):
@@ -71,10 +77,8 @@ class FileWatcher(Watcher):
             
             file = await File.read(resolved_path)
             
-            color = "red" if file.too_large else "bright_black"
-            extra = "  [yellow]Large file[/yellow]" if file.too_large else ""
-            logger.info(f"  {resolved_path}  [{color}]{bytes_to_human(file.size)}[/{color}]{extra}")
             self.cache[resolved_path] = file
+            logger.info(f"  {format_file(file)}")
     
         logger.info("Watching!")
     
@@ -100,23 +104,23 @@ class FileWatcher(Watcher):
                     
                     # Deleting the file from cache
                     del self.cache[resolved_path]
-                    print(f"Deleted {resolved_path} from cache")
+                    logger.info(f"Deleted {resolved_path} from cache")
                     
                     if event is not None:
                         await queue.put(event)
     
                     continue
     
-                if self.cache.get(resolved_path) is None:
-                    logger.info(f"Watching {resolved_path}")
-                    self.cache[resolved_path] = File(
-                        resolved_path,
-                        b"",
-                        0
-                    )
-    
                 try:
                     new_file = await File.read(resolved_path)
+                    
+                    if self.cache.get(resolved_path) is None:
+                        logger.info(f"New file found: {format_file(new_file)} ")
+                        self.cache[resolved_path] = File(
+                            resolved_path,
+                            b"",
+                            0
+                        )
                     
                     if self.current_file is None:
                         self.current_file = new_file
@@ -134,9 +138,10 @@ class FileWatcher(Watcher):
                         
                         if event is not None:
                             await queue.put(event)
-                            
-                        self.current_file = new_file
+                        
                         self.cache[resolved_path] = new_file
+                        
+                    self.current_file = new_file
                 
                 except OSError as e:
                     if Path(resolved_path).is_dir():
@@ -165,5 +170,4 @@ class FileWatcher(Watcher):
             
             
             self.cache[self.current_file.path] = self.current_file
-            
             self.current_file = None

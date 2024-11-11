@@ -29,10 +29,11 @@ class ConfigInvalidatedException(Exception):
 
 async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequence[Watcher], should_shutdown: asyncio.Event):
     next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
-    changed_events: Dict[str, Event] = dict()
     fut: Future[Event] | None = None
 
     while not should_shutdown.is_set():
+        changed_events: Dict[str, Event] = dict()
+        
         while (due := next_heartbeat_due - time.time()) > 0 and not should_shutdown.is_set():
             if fut is None or fut.done():
                 fut = asyncio.create_task(queue.get())
