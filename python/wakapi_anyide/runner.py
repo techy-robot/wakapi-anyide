@@ -121,10 +121,10 @@ def languageProcessor(env: Environment, filename: str):
     languages = env.project.files.language_mapping
     
     suffix = Path(filename).suffix
-    for x in languages.keys():
-        if suffix == x: # If the suffix matches the defined one in the languages table
-            return languages.get(suffix)
-    return suffix.replace(".", "") # If not, return the suffix
+    lang = languages.get(suffix) # If the suffix matches a defined one in the languages table
+    if lang is None:
+        return suffix.replace(".", "") # If it didn't find a match, return the suffix 
+    return lang
     
 async def run(env: Environment):
     ev = asyncio.get_event_loop()
