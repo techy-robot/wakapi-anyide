@@ -73,7 +73,7 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
         new_file = event.file
         old_file = cache[event.filename]
 
-        try:
+        try: #Process text files and finding line changes
             new_file = new_file.decode()
             old_file = old_file.decode()
             
@@ -85,26 +85,33 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
 
             old_file_lines = old_file.splitlines()
             
-            changed_lines = 0
-            changed_lines = abs(len(new_file_lines) - len(old_file_lines)) 
+            added_lines = 0
+            deleted_lines = 0
+            changed_lines = len(new_file_lines) - len(old_file_lines)
+            
+            if changed_lines < 0:
+                deleted_lines = abs(changed_lines)
+            else:
+                added_lines = changed_lines 
             
             # Need to include a mechanism to drop the change event when the file hasn't changed at all
             if new_file == old_file:
                 print ("file did not change")
                 
             if changed_lines == 0 and new_file != old_file: 
-                changed_lines = 7 # random placeholder value, we don't actually care how many lines changed from the diff 
+                added_lines = 7 # random placeholder value, we don't actually care how many lines changed from the diff 
+                deleted_lines = 7
 
             return ChangeEvent(
                 filename=event.filename,
                 file=event.file,
                 cursor=(0, 0),
-                lines_added=changed_lines,
-                lines_removed=changed_lines,
+                lines_added=added_lines,
+                lines_removed=deleted_lines,
                 lines=len(new_file_lines),
                 time=event.time
             )
-        except UnicodeDecodeError:
+        except UnicodeDecodeError: # Process binary files, we don't need to calculate line changes
             if ignore_binary:
                 print(f"Ignored file {event.filename}")
                 return
