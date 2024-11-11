@@ -1,8 +1,10 @@
 import time
+import logging
 from asyncio import Task
 from asyncio.queues import Queue
 from asyncio.taskgroups import TaskGroup
 from pathlib import Path
+from typing import AsyncGenerator, Dict
 
 from aiofiles import open
 from pathspec import PathSpec
@@ -126,7 +128,7 @@ class FileWatcher(Watcher):
     async def shutdown(self):
         pass
     
-    async def resolve_events(self) -> AsyncGenerator[Event]:
+    async def resolve_events(self) -> AsyncGenerator[Event, None]:
         if self.current_file is not None:
             assert self.current_file_bytes
             
