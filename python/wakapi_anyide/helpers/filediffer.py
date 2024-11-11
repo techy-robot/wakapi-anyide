@@ -1,5 +1,6 @@
 import difflib
 import logging
+from pathlib import Path
 
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
@@ -22,7 +23,6 @@ def index_to_linecol(file: str, index: int):
 
 
 def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: float, env: Environment) -> Event | None:
-    
     file_extension = Path(filename).suffix
     
     if len(new_file) > 2**16 or len(old_file) > 2**16:
@@ -31,7 +31,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
         lines_removed = -min(0, diff)
         
         return Event(
-            filename=filename,
+            filename=f"{filename}#wakapi-anyide-toolarge",
             file_extension=file_extension,
             cursor=(0, 0),
             lines_added=lines_added,
@@ -113,7 +113,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
 
         return Event(
             filename=filename,
-            file_extension=f"#wakapi-anyide-binaryfile", # custom handling for binary files
+            file_extension=f"{filename}#wakapi-anyide-binaryfile", # custom handling for binary files
             cursor=(1, last_index),
             lines_added=added_lines,
             lines_removed=deleted_lines,
