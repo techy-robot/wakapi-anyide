@@ -47,10 +47,7 @@ class UnresolvedChangeEvent:
 @dataclass
 class ChangeEvent:
     filename: str
-    file: bytes
-    cursor: Tuple[int, int]
-    lines_added: int
-    lines_removed: int
+    checksum: bytes
     lines: int
     time: float
 
@@ -71,8 +68,8 @@ async def main(env: Environment):
 
 def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
     async def inner(event: UnresolvedChangeEvent) -> ChangeEvent | None:
-        new_file = event.file
-        old_file = copy.deepcopy(cache[event.filename])
+        new_checksum = sha256(event.file).digest()
+        old_checksum = copy.deepcopy(cache[event.filename])
         
         # Updating the cache
         
@@ -80,66 +77,23 @@ def process_file_changes(cache: Dict[str, bytes], ignore_binary: bool):
             del cache[event.filename]
             print(f"Deleted {event.filename} from cache")
         else:# Update the cache for the file
-            cache[event.filename] = event.file
+            cache[event.filename] = new_checksum
 
-        try: #Process text files and finding line changes
-            new_file = new_file.decode()
-            old_file = old_file.decode()
-            
-            # Simplified process, we don't actually need to track individual changes and compare all the lines, all we need to know is if it changed.
-            # At some point I will add a mechanism for calculating md5 hash of the file and compare it to the past 10 file hashes over a long time range to verify someone
-            # isn't just spamming the same file over and over.
+        #Process text files and finding line changes
 
-            new_file_lines = new_file.splitlines()
+        # compare file checksums
+        if new_checksum != old_checksum:
+            print(f"File modified: {event.filename}")
+            return
 
-            old_file_lines = old_file.splitlines()
-            
-            added_lines = 0
-            deleted_lines = 0
-            changed_lines = len(new_file_lines) - len(old_file_lines)
-            
-            if changed_lines < 0:
-                deleted_lines = abs(changed_lines)
-            else:
-                added_lines = changed_lines 
-            
-            # Need to include a mechanism to drop the change event when the file hasn't changed at all
-            if new_file == old_file:
-                print ("file did not change")
-                
-            # TODO: The cache store a copy of every single file in memory. This is not a good idea for large multi-gigabyte projects, but it should be fine for small projects.
-                
-            if changed_lines == 0 and new_file != old_file: 
-                added_lines = 7 # random placeholder value, we don't actually care how many lines changed from the diff 
-                deleted_lines = 7
+        new_file_lines = new_file.splitlines()
 
-            return ChangeEvent(
-                filename=event.filename,
-                file=event.file,
-                cursor=(0, 0),
-                lines_added=added_lines,
-                lines_removed=deleted_lines,
-                lines=len(new_file_lines),
-                time=event.time
-            )
-        except UnicodeDecodeError: # Process binary files, we don't need to calculate line changes
-            if ignore_binary:
-                print(f"Ignored file {event.filename}")
-                return
-
-            changed_lines = 0
-            if new_file != old_file: 
-                changed_lines = 7 # random placeholder value, we don't actually care how many lines changed from the diff 
-
-            return ChangeEvent(
-                filename=f"{event.filename}#wakapi-anyide-binaryfile",
-                file=event.file,
-                cursor=(0, 0),
-                lines_added=changed_lines,
-                lines_removed=changed_lines,
-                lines=len(new_file),
-                time=event.time
-            )
+        return ChangeEvent(
+            filename=event.filename,
+            checksum=new_checksum,
+            lines=len(new_file_lines),
+            time=event.time
+        )
 
     return inner
 
@@ -181,7 +135,7 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
 
         print(f"Change summary:")
         for event in changed_events:
-            print(f"{event.filename:20} at {event.cursor[0]}:{event.cursor[1]} +{event.lines_added} -{event.lines_removed}")
+            print(f"{event.filename:20} checksum: {event.checksum}, current line count: {event.lines}")
 
         host = uname()
         user_agent = f"wakatime/unset ({host.system}-none-none) wakapi-anyide-wakatime/unset"
@@ -194,10 +148,6 @@ async def consumer(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent]
             "project": env.project.project.name,
             **({"language": languageProcessor(env, event.filename)} if languageProcessor(env, event.filename) is not None else {}), # dict comprehension, only include language if it's custom defined, otherwise let Wakatime determine
             "lines": event.lines,
-            "line_additions": event.lines_added,
-            "line_deletions": event.lines_removed,
-            "lineno": event.cursor[0],
-            "cursorpos": event.cursor[1],
             "is_write": True,
             "editor": "wakapi-anyide",
             "machine": env.config.settings.hostname or f"anonymised machine {sha256(host.node.encode()).hexdigest()[:8]}",
@@ -269,9 +219,9 @@ async def watcher(env: Environment, queue: asyncio.Queue[UnresolvedChangeEvent],
         async def add_cache(path: Path):
             if excluded_paths.match_file(path):
                 return
-
+            # open file and calculate checksum and add to the cache
             async with open(path, 'rb') as file:
-                cache[normalise(path)] = await file.read()
+                cache[normalise(path)] = sha256(await file.read()).digest()
                 print(f"Cached {normalise(path)}")
 
         await asyncio.gather(*[add_cache(Path('./').absolute() / Path(x)) for x in included_paths.match_tree('./')])
