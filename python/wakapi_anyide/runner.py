@@ -16,6 +16,7 @@ from aiohttp import ClientResponse
 from aiohttp import request
 
 from wakapi_anyide.models.environment import Environment
+from wakapi_anyide.watchers import WATCHERS
 from wakapi_anyide.watchers.filewatcher import FileWatcher
 from wakapi_anyide.watchers.types import Event
 from wakapi_anyide.watchers.types import Watcher
@@ -131,7 +132,7 @@ def language_processor(env: Environment, file_extension: str) -> str:
     
 async def run(env: Environment):
     ev = asyncio.get_event_loop()
-    runners = [FileWatcher(env)]
+    runners = [WATCHERS[watcher](env) for watcher in env.project.meta.watchers]
     emit_events: Queue[Event] = Queue()
     should_shutdown = asyncio.Event()
     task: Future
