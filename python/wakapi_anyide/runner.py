@@ -84,7 +84,7 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             "category": "coding",
             "time": event.time,
             "project": env.project.project.name,
-            "language": language_processor(env, event.filename),
+            "language": language_processor(env, event.file_extension),
             "lines": event.lines,
             "line_additions": event.lines_added,
             "line_deletions": event.lines_removed,
@@ -118,13 +118,12 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             raise Exception(f"Failed to send heartbeat: {response.status} {last_text}")
 
 
-def language_processor(env: Environment, filename: str) -> str:
+def language_processor(env: Environment, file_extension: str) -> str:
     languages = env.project.files.language_mapping
 
-    suffix = Path(filename).suffix
-    lang = languages.get(suffix)  # If the suffix matches a defined one in the languages table
+    lang = languages.get(file_extension)  # If the suffix matches a defined one in the languages table
     if lang is None:
-        return suffix.replace(".", "")  # If it didn't find a match, return the suffix
+        return suffix.replace(".", "")  # If it didn't find a match, return the suffix only
     return lang
     
     

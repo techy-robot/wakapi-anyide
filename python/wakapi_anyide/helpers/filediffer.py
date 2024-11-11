@@ -23,6 +23,8 @@ def index_to_linecol(file: str, index: int):
 
 def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: float, env: Environment) -> Event | None:
     
+    file_extension = Path(filename).suffix
+    
     if len(new_file) > 2**16 or len(old_file) > 2**16:
         diff = len(new_file) - len(old_file)
         lines_added = max(0, diff)
@@ -30,6 +32,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
         
         return Event(
             filename=filename,
+            file_extension=file_extension,
             cursor=(0, 0),
             lines_added=lines_added,
             lines_removed=lines_removed,
@@ -76,6 +79,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
 
         return Event(
             filename=filename,
+            file_extension=file_extension,
             cursor=(line, col),
             lines_added=added_lines,
             lines_removed=deleted_lines,
@@ -109,6 +113,7 @@ def process_file_change(filename: str, new_file: bytes, old_file: bytes, time: f
 
         return Event(
             filename=filename,
+            file_extension=f"#wakapi-anyide-binaryfile", # custom handling for binary files
             cursor=(1, last_index),
             lines_added=added_lines,
             lines_removed=deleted_lines,

@@ -10,6 +10,7 @@ from wakapi_anyide.models.environment import Environment
 @dataclass
 class Event:
     filename: str
+    file_extension: str
     cursor: Tuple[int, int]
     lines_added: int
     lines_removed: int
