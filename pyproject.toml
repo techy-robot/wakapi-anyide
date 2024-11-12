@@ -1,6 +1,6 @@
 [project]
 name = "wakapi-anyide"
-version = "0.6.4"
+version = "0.6.5"
 description = "Time tracking for any IDE with WakaTime-like servers"
 readme = "README.md"
 requires-python = ">=3.12"
