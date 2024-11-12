@@ -49,6 +49,7 @@ class FileWatcher(Watcher):
     env: Environment
     task: Task
     cache: Dict[str, FileMetadata] = dict()
+    delete: bool = False
     
     def __init__(self, env: Environment):
         self.env = env
@@ -94,7 +95,7 @@ class FileWatcher(Watcher):
                 logger.debug(f"Got event: {event}")
                 resolved_path = self.normalise(Path(event.target))
                 new_file = None # define the var for the whole loop iteration
-                delete = False
+                self.delete = False
                 
                 # check if we should ignore this file if its on the naughty list 
                 if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
@@ -106,7 +107,7 @@ class FileWatcher(Watcher):
                 except OSError as e:# it can't read the file, which means it was deleted
                     if not Path(resolved_path).is_dir():
                         new_file = FileMetadata.empty(resolved_path)
-                        delete = True
+                        self.delete = True
                 
                 # If this event path is not recognized in the cache, its a new file
                 if self.cache.get(resolved_path) is None:
@@ -118,19 +119,24 @@ class FileWatcher(Watcher):
                 # Now, add the file current one as being handled
                 self.current_file = new_file
                 
+                # For some reason, all the files to be processed are handled here, but the last file is the .current file
+                # Oh wait, that makes complete sense! 
+                
                 # Process the current file and add it to the eventqueue
                 event = process_file_change(
                     new_file=self.current_file,
-                    old_file=self.cache[self.current_file.path],
+                    old_file=self.cache[resolved_path],
                     time=time.time(),
                     env=self.env
                 )
+                
                 if event is not None:
                     await queue.put(event)
-                
-                if delete:
+                    
+                if self.delete:
                     del self.cache[resolved_path]
-                    logger.info(f"Deleted file: {format_file(new_file)} ")
+                    logger.info(f"Deleted file: {format_file(self.current_file)} ")
+                
         
     async def setup(self, tg: TaskGroup, emit_event: Queue[Event]):
         self.task = tg.create_task(self._task(emit_event))
@@ -138,21 +144,20 @@ class FileWatcher(Watcher):
     async def shutdown(self):
         pass
     
-    async def resolve_events(self) -> AsyncGenerator[Event, None]:
-        # For every event in this watchers list, process the changes and compare
-        if self.current_file is not None:
-            event = process_file_change(
-                new_file=self.current_file,
-                old_file=self.cache[self.current_file.path],
-                time=time.time(),
-                env=self.env
-            )
+    async def resolve_events(self, events: Dict[str, Event]):
+        # I think the actual goal of resolve events is to complete the last file in the queue
+        # which is the current file
+        
+        # For every event in this watchers list, update the cache
+        for path in events:
+            logger.info(f"Resolving event: {events.get(path)}")
             
-            # Return the event, this is produces a generator, so resolve events can be iteratored
-            if event is not None:
-                yield event
-            
-            # Clear the current file and reset the cache to the latest file.
-            self.cache[self.current_file.path] = self.current_file
-            self.current_file = None
-            self.current_file_checksum = None
+            if self.cache.get(path) is not None: # verified its not a deleted file event
+                # Reset the cache to the latest file.
+                try:
+                    new_file = await FileMetadata.read(path)
+                    self.cache[path] = new_file
+                except OSError as e:# it can't read the file, which means it was deleted in the intermission
+                    logger.info(f"File deleted too fast: {path}")
+                    continue
+        

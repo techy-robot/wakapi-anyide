@@ -63,15 +63,8 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
         
         # Adding to the events. Watchers is a list of individual programs
         for watcher in watchers:
-            logger.debug(f"Getting events from {watcher}")
-            iterable = watcher.resolve_events() # returns a generator
-            logger.debug(f"Maybe iterable is {iterable}")
-            
-            if iterable is not None:           
-                async for event in iterable:
-                    # everything in the queue, process the event
-                    changed_events[event.filename] = event
-                    logger.info(f"Got event for {event.filename}")
+            logger.debug(f"Resolving events from {watcher}")
+            await watcher.resolve_events(changed_events) # goes through the current events and updates the cache
         
         logger.debug(changed_events)
         
@@ -81,7 +74,7 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
 
         logger.info(f"Change summary:")
         for event in changed_events.values():
-            logger.info(f"{event.filename:20} checksum: {event.checksum} +{event.lines_added} -{event.lines_removed}")
+            logger.info(f"{event.filename:20} checksum: {event.checksum} +{event.lines_added} -{event.lines_removed} linecount: {event.lines}")
 
         host = uname()
         user_agent = f"wakatime/unset ({host.system}-none-none) wakapi-anyide-wakatime/unset"
