@@ -76,7 +76,7 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
 
         logger.info(f"Change summary:")
         for event in changed_events.values():
-            logger.info(f"{event.filename:20} at {event.cursor[0]}:{event.cursor[1]} +{event.lines_added} -{event.lines_removed}")
+            logger.info(f"{event.filename:20} checksum: {event.checksum} +{event.lines_added} -{event.lines_removed}")
 
         host = uname()
         user_agent = f"wakatime/unset ({host.system}-none-none) wakapi-anyide-wakatime/unset"
@@ -88,9 +88,11 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             "time": event.time,
             "project": env.project.project.name,
             "language": language_processor(env, event.file_extension),
+            "line_additions": event.lines_added,
+            "line_deletions": event.lines_removed,
             "lines": event.lines,
             "is_write": True,
-            "editor": "wakapi-anyide",
+            "editor": "wakapi-anyide", # Add to a list of editors in the wakapi-anyide settings
             "machine": env.config.settings.hostname or f"anonymised machine {sha256(host.node.encode()).hexdigest()[:8]}",
             "operating_system": host.system,
             "user_agent": user_agent
@@ -124,6 +126,26 @@ def language_processor(env: Environment, file_extension: str) -> str:
     if lang is None:
         return file_extension.replace(".", "")  # If it didn't find a match, return the suffix only
     return lang
+
+def editor_processor(env: Environment, file_extension: str) -> str:
+    """
+    Determines the editor name for a given file extension based on the 
+    environment's editor mapping configuration.
+
+    Args:
+        env (Environment): The environment containing project settings.
+        file_extension (str): The file extension to look up.
+
+    Returns:
+        str: The name of the editor associated with the file extension,
+             or "wakapi-anyide" if no specific editor is found.
+    """
+    editor = env.project.files.editor_mapping
+
+    edit = editor.get(file_extension)  # If the file suffix matches a defined one in the table, d
+    if edit is None:
+        return f"wakapi-anyide"  # default to wakapi-anyide
+    return edit
     
     
 async def run(env: Environment):

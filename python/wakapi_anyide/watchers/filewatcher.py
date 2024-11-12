@@ -12,7 +12,7 @@ from pathspec import PathSpec
 
 from wakapi_anyide._rust.watch import Watch
 from wakapi_anyide._rust.watch import WatchEventType
-from wakapi_anyide.helpers.filediffer import File
+from wakapi_anyide.helpers.filediffer import FileMetadata
 from wakapi_anyide.helpers.filediffer import process_file_change
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
@@ -31,10 +31,13 @@ def bytes_to_human(size: int):
     return f"{(size / 1024**6):.2f} PiB"
     
 
-def format_file(file: File):
-    color = "red" if file.too_large else "bright_black"
-    extra = "  [yellow]Large file[/yellow]" if file.too_large else ""
-    return(f"{file.path}  [{color}]{bytes_to_human(file.size)}[/{color}]{extra}")
+def format_file(file: FileMetadata):
+    color = "red" if file.binary else "bright_black"
+    extra = "  [yellow]Binary file[/yellow]" if file.binary else ""
+    if file.binary:
+        return(f"{file.path}  [{color}]{bytes_to_human(file.linecount*100)}[/{color}]{extra}")# *100 is a compensation for the earlier measure to reduce number of psuedo lines
+    else:
+        return(f"{file.path}  [{color}]{file.linecount}[/{color}]{extra}")
 
 
 class FileWatcher(Watcher):
@@ -42,10 +45,10 @@ class FileWatcher(Watcher):
     Watches filesystem events for file changes.
     """
     
-    current_file: File | None = None
+    current_file: FileMetadata | None = None
     env: Environment
     task: Task
-    cache: Dict[str, File] = dict()
+    cache: Dict[str, FileMetadata] = dict()
     
     def __init__(self, env: Environment):
         self.env = env
@@ -75,10 +78,10 @@ class FileWatcher(Watcher):
             if excluded_paths.match_file(resolved_path):
                 continue
             
-            file = await File.read(resolved_path)
+            #Determine all the file properties during reading
             
-            self.cache[resolved_path] = sha256(file).digest()
-            logger.info(f"  {format_file(file)}")
+            self.cache[resolved_path] = await FileMetadata.read(resolved_path)
+            logger.info(f"Test {format_file(self.cache[resolved_path])}")
     
         logger.info("Watching!")
     
@@ -89,40 +92,28 @@ class FileWatcher(Watcher):
     
                 if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
                     continue
-                
-                if event.kind == WatchEventType.Delete:
-                    if self.cache.get(resolved_path) is None:
-                        logger.warning(f"Deletion event for {resolved_path} ignored because the file was not tracked")
-                        continue
-                    
-                    event = process_file_change(
-                        new_file=File(resolved_path, b"", 0),
-                        old_file=self.cache[resolved_path],
-                        time=time.time(),
-                        env=self.env
-                    )
-                    
-                    # Deleting the file from cache
-                    del self.cache[resolved_path]
-                    logger.info(f"Deleted {resolved_path} from cache")
-                    
-                    if event is not None:
-                        await queue.put(event)
     
-                    continue
-    
-                try:
-                    new_file = sha256(await File.read(resolved_path)).digest()
+                try: #try to read the file, otherwise it must have been deleted
+                    new_file = await FileMetadata.read(resolved_path)
+                    logger.info(f"path: {resolved_path}")
+                    
+                    # Update the current file. Not really sure why this is needed.
+                    self.current_file = new_file
                     
                     if self.cache.get(resolved_path) is None:
                         logger.info(f"New file found: {format_file(new_file)} ")
-                        self.cache[resolved_path] = sha256(await file.read()).digest()
-                        )
-                    
-                    if self.current_file is None:
-                        self.current_file = new_file
+                        self.cache[resolved_path] = new_file
                         
-                        continue
+                        event = process_file_change(
+                            new_file=new_file,
+                            old_file=FileMetadata(resolved_path, 0, None, new_file.binary),
+                            time=time.time(),
+                            env=self.env
+                        )
+                        
+                        # add to queue
+                        if event is not None:
+                            await queue.put(event)
                     
                     if self.current_file.path != resolved_path:
                         logger.debug(f"File changed (was {self.current_file.path}, now {resolved_path})")
@@ -136,15 +127,28 @@ class FileWatcher(Watcher):
                         if event is not None:
                             await queue.put(event)
                         
+                        # Update the cache
                         self.cache[resolved_path] = new_file
-                        
-                    self.current_file = new_file
                 
-                except OSError as e:
+                except OSError as e: # file must have been deleted
                     if Path(resolved_path).is_dir():
                         continue
-    
-                    logger.warning(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
+                    
+                    event = process_file_change(
+                        new_file=FileMetadata(resolved_path, 0, None, False),
+                        old_file=self.cache[resolved_path],
+                        time=time.time(),
+                        env=self.env
+                    )
+                    
+                    # Deleting the file from cache
+                    del self.cache[resolved_path]
+                    logger.info(f"Deleted {resolved_path} from cache")
+                    
+                    if event is not None:
+                        await queue.put(event)
+
+                    continue
 
         
     async def setup(self, tg: TaskGroup, emit_event: Queue[Event]):

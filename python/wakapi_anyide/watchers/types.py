@@ -11,7 +11,9 @@ from wakapi_anyide.models.environment import Environment
 class Event:
     filename: str
     file_extension: str
-    checksum: bytes
+    checksum: str
+    lines_added: int
+    lines_removed: int
     lines: int
     time: float
 

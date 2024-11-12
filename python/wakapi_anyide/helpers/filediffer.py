@@ -9,132 +9,91 @@ from aiofiles.ospath import getsize
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
 
-logger = logging.getLogger(__name__)
+from hashlib import sha256
+import random
 
-SIZE_MAX = 2**16
+logger = logging.getLogger(__name__)
 
 
 @dataclass
-class File:
+class FileMetadata:
     path: str
-    body: bytes
-    size: int
-    
-    @property
-    def too_large(self):
-        return self.size > SIZE_MAX
+    linecount: int
+    checksum: str
+    binary: bool
     
     @classmethod
     async def read(cls, path: str):
-        size = await getsize(path)
+
+        #  Reads the file contents and returns the important metadata on it, but no content
         
-        if size > SIZE_MAX:
+        async with open(path, 'rb') as file: # Problem right here: Its reading in binary mode
+            line = 0
+            checksum = sha256(await file.read()).hexdigest()
+            binary = False
+            """ def _count_generator(reader):
+                b = reader(1024 * 1024)
+                while b:
+                    yield b
+                    b = reader(1024 * 1024) """
+            try:
+                # we might want to support any encoding type in the future. This will suffice though just to detect an error
+                
+                # Read line count without loading the file into memory
+                # c_generator = _count_generator(file.raw.read)
+                # count each \n
+                # line = sum(buffer.count(b'\n') for buffer in c_generator) +1
+                
+                # WHY ON EARTH is the line count not working, no matter what I try?
+                
+                filearray = await file.read()
+                filedecoded = filearray.decode()
+                filelines = filedecoded.splitlines()
+                line = len(filelines)
+                
+                logger.info('Line count:', line)
+                
+            except UnicodeDecodeError:
+                line = (await getsize(path)) / 100 # Read file size in bytes instead of line count. Estimate 100 bytes a line
+                binary = True
+                
             return cls(
                 path,
-                b"",
-                size
+                line,
+                checksum,
+                binary
             )
-        else:
-            async with open(path, 'rb') as file:
-                return cls(
-                    path,
-                    await file.read(),
-                    size
-                )
 
 
-def process_file_change(new_file: File, old_file: File, time: float, env: Environment) -> Event | None:
+def process_file_change(new_file: FileMetadata, old_file: FileMetadata, time: float, env: Environment) -> Event | None:
     filename = new_file.path
     file_extension = Path(new_file.path).suffix
-    
-    if new_file.too_large or old_file.too_large:
-        diff = new_file.size - old_file.size
-        lines_added = max(0, diff)
-        lines_removed = -min(0, diff)
-        
-        return Event(
-            filename=f"{filename}#wakapi-anyide-toolarge",
-            file_extension=file_extension,
-            lines=new_file.size,
-            checksum=sha256(new_file).digest(),
-            lines=len(new_file),
-            time=time
-        )
-    
-    try:
-        new_file_str = new_file.body.decode()
-        old_file_str = old_file.body.decode()
 
-        last_index = 0
-        for op in difflib.SequenceMatcher(a=old_file_str, b=new_file_str, autojunk=False).get_opcodes():
-            match op:
-                case ('replace', _, _, _, j2):
-                    last_index = max(last_index, j2)
-                case ('delete', i1, _, _, _):
-                    last_index = max(last_index, i1)
-                case ('insert', i1, _, j1, j2):
-                    last_index = max(last_index, j2)
-                case ('equal', _, _, _, _):
-                    pass
-                case _:
-                    raise Exception(f"Unknown opcode {op}")
-
-        new_file_lines = new_file_str.splitlines()
-        added_lines = 0
-        deleted_lines = 0
-        for op in difflib.SequenceMatcher(a=old_file_str.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
-            match op:
-                case ('replace', i1, i2, j1, j2):
-                    added_lines += j2 - j1
-                    deleted_lines += i2 - i1
-                case ('delete', i1, i2, _, _):
-                    deleted_lines += i2 - i1
-                case ('insert', _, _, j1, j2):
-                    added_lines += j2 - j1
-                case ('equal', _, _, _, _):
-                    pass
-                case _:
-                    raise Exception(f"Unknown opcode {op}")
-
-        line, col = index_to_linecol(new_file_str, last_index)
-
-        return Event(
-            filename=filename,
-            file_extension=file_extension,
-            checksum=sha256(new_file).digest(),
-            lines=len(new_file_lines),
-            time=time
-        )
-    except UnicodeDecodeError:
+    if (new_file.binary or old_file.binary):   
         if env.project.files.exclude_binary_files:
             logger.info(f"Ignored file {filename}")
             return
+        file_extension=f"{filename}#wakapi-anyide-binaryfile" # if it is a binary file, add a flag
+        
+    lines_added = 0
+    lines_removed = 0
+    
+    if new_file.checksum != old_file.checksum: # Compare checksums.If the file is modified, generate a baseline random line diff
+        logger.info(f"File modified: {filename}")
+        lines_added = random.randint(0, 20)
+        lines_removed = random.randint(0, 20)
+    
+    # basic diff of either the linecount, or the byte count / 100 of the file 
+    diff = new_file.linecount - old_file.linecount
+    lines_added = max(0, diff)
+    lines_removed = -min(0, diff)
 
-        added_lines = 0
-        deleted_lines = 0
-        last_index = 0
-        for op in difflib.SequenceMatcher(a=old_file.body, b=new_file.body, autojunk=False).get_opcodes():
-            match op:
-                case ('replace', i1, i2, j1, j2):
-                    added_lines += j2 - j1
-                    deleted_lines += i2 - i1
-                    last_index = max(last_index, j2)
-                case ('delete', i1, i2, _, _):
-                    deleted_lines += i2 - i1
-                    last_index = max(last_index, i1)
-                case ('insert', _, _, j1, j2):
-                    added_lines += j2 - j1
-                    last_index = max(last_index, j2)
-                case ('equal', _, _, _, _):
-                    pass
-                case _:
-                    raise Exception(f"Unknown opcode {op}")
-
-        return Event(
-            filename=filename,
-            lines=len(new_file),
-            checksum=sha256(new_file).digest(),
-            lines=len(new_file.body),
-            file_extension=f"{filename}#wakapi-anyide-binaryfile", # custom handling for binary files
-            time=time
-        )
+    return Event(
+        filename=filename,
+        file_extension=file_extension,
+        checksum=new_file.checksum,
+        lines_added=lines_added,
+        lines_removed=lines_removed,
+        lines=new_file.linecount,
+        time=time
+    )
