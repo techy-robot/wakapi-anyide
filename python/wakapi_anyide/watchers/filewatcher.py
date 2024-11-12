@@ -94,10 +94,10 @@ class FileWatcher(Watcher):
                     continue
                 
                 if event.kind == WatchEventType.Delete:
-                    new_file = File.empty(resolved_path)
+                    new_file = FileMetadata.empty(resolved_path)
                 else:
                     try:
-                        new_file = await File.read(resolved_path)
+                        new_file = await FileMetadata.read(resolved_path)
                     except OSError as e:
                         if not Path(resolved_path).is_dir():
                             logger.warning(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
@@ -106,7 +106,7 @@ class FileWatcher(Watcher):
                 
                 if self.cache.get(resolved_path) is None:
                     logger.info(f"New file found: {format_file(new_file)} ")
-                    self.cache[resolved_path] = File(
+                    self.cache[resolved_path] = FileMetadata(
                         resolved_path,
                         0,
                         "",
