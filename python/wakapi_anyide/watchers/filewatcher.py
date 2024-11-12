@@ -73,7 +73,7 @@ class FileWatcher(Watcher):
             resolved_path = self.normalise(Path('./').absolute() / Path(path))
             
             if excluded_paths.match_file(resolved_path):
-                return
+                continue
             
             file = await File.read(resolved_path)
             
