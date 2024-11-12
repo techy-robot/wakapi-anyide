@@ -38,8 +38,25 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
         # wait until the next heartbeat due, processing events in the meantime
         while (due := next_heartbeat_due - time.time()) > 0 and not should_shutdown.is_set():
             # we don't want to block on getting an event if we're already processing one, so only get a new event if the previous one is done
+            # I'm not sure exactly what this does to prevent thread blocking
+            if fut is None or fut.done():
+                fut = asyncio.create_task(queue.get())
+            
             logger.debug(f"Next event due in {due}s")
-        
+                 
+            completed, rest = await asyncio.wait([
+                fut,
+                asyncio.create_task(should_shutdown.wait())
+            ], return_when=asyncio.FIRST_COMPLETED, timeout=due)  # type: ignore
+            
+            if fut in completed:
+                event = fut.result()
+
+                if env.is_test_only:
+                    logger.debug(f"Got event for {event.filename}!")
+
+                changed_events[event.filename] = event
+
         logger.debug("Processing heartbeats")
         
         next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds

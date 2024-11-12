@@ -84,7 +84,7 @@ class FileWatcher(Watcher):
             file = await FileMetadata.read(resolved_path)
             
             self.cache[resolved_path] = await FileMetadata.read(resolved_path)
-            logger.info(f"Test {format_file(self.cache[resolved_path])}")
+            logger.info(format_file(file))
     
         logger.info("Watching!")
     
@@ -94,23 +94,19 @@ class FileWatcher(Watcher):
                 logger.debug(f"Got event: {event}")
                 resolved_path = self.normalise(Path(event.target))
                 new_file = None # define the var for the whole loop iteration
+                delete = False
                 
                 # check if we should ignore this file if its on the naughty list 
                 if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
                     continue
                 
-                # If the event is a delete event, overwrite the file with an empty file
-                if event.kind == WatchEventType.Delete:
-                    new_file = FileMetadata.empty(resolved_path)
-                else:
-                    # Else, read the current file
-                    try:
-                        new_file = await FileMetadata.read(resolved_path)
-                    except OSError as e:
-                        if not Path(resolved_path).is_dir():
-                            logger.warning(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
-                        
-                        continue
+                # read the current file
+                try:
+                    new_file = await FileMetadata.read(resolved_path)
+                except OSError as e:# it can't read the file, which means it was deleted
+                    if not Path(resolved_path).is_dir():
+                        new_file = FileMetadata.empty(resolved_path)
+                        delete = True
                 
                 # If this event path is not recognized in the cache, its a new file
                 if self.cache.get(resolved_path) is None:
@@ -119,8 +115,22 @@ class FileWatcher(Watcher):
                     # add the file to the cache only for the diffing, making sure it is empty
                     self.cache[resolved_path] = FileMetadata.empty(resolved_path)
             
-                # Now, add the file to be processed
+                # Now, add the file current one as being handled
                 self.current_file = new_file
+                
+                # Process the current file and add it to the eventqueue
+                event = process_file_change(
+                    new_file=self.current_file,
+                    old_file=self.cache[self.current_file.path],
+                    time=time.time(),
+                    env=self.env
+                )
+                if event is not None:
+                    await queue.put(event)
+                
+                if delete:
+                    del self.cache[resolved_path]
+                    logger.info(f"Deleted file: {format_file(new_file)} ")
         
     async def setup(self, tg: TaskGroup, emit_event: Queue[Event]):
         self.task = tg.create_task(self._task(emit_event))
