@@ -91,64 +91,44 @@ class FileWatcher(Watcher):
                     continue
                 
                 if event.kind == WatchEventType.Delete:
-                    if self.cache.get(resolved_path) is None:
-                        logger.warning(f"Deletion event for {resolved_path} ignored because the file was not tracked")
+                    new_file = File.empty(resolved_path)
+                else:
+                    try:
+                        new_file = await File.read(resolved_path)
+                    except OSError as e:
+                        if not Path(resolved_path).is_dir():
+                            logger.warning(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
+                        
                         continue
+                
+                if self.cache.get(resolved_path) is None:
+                    logger.info(f"New file found: {format_file(new_file)} ")
+                    self.cache[resolved_path] = File(
+                        resolved_path,
+                        b"",
+                        0
+                    )
+                
+                if self.current_file is None:
+                    self.current_file = new_file
                     
+                    continue
+                
+                if self.current_file.path != resolved_path:
+                    logger.debug(f"File changed (was {self.current_file.path}, now {resolved_path})")
                     event = process_file_change(
-                        new_file=File(resolved_path, b"", 0),
+                        new_file=new_file,
                         old_file=self.cache[resolved_path],
                         time=time.time(),
                         env=self.env
                     )
                     
-                    # Deleting the file from cache
-                    del self.cache[resolved_path]
-                    logger.info(f"Deleted {resolved_path} from cache")
-                    
                     if event is not None:
                         await queue.put(event)
-    
-                    continue
-    
-                try:
-                    new_file = await File.read(resolved_path)
                     
-                    if self.cache.get(resolved_path) is None:
-                        logger.info(f"New file found: {format_file(new_file)} ")
-                        self.cache[resolved_path] = File(
-                            resolved_path,
-                            b"",
-                            0
-                        )
+                    self.cache[resolved_path] = new_file
                     
-                    if self.current_file is None:
-                        self.current_file = new_file
-                        
-                        continue
-                    
-                    if self.current_file.path != resolved_path:
-                        logger.debug(f"File changed (was {self.current_file.path}, now {resolved_path})")
-                        event = process_file_change(
-                            new_file=new_file,
-                            old_file=self.cache[resolved_path],
-                            time=time.time(),
-                            env=self.env
-                        )
-                        
-                        if event is not None:
-                            await queue.put(event)
-                        
-                        self.cache[resolved_path] = new_file
-                        
-                    self.current_file = new_file
-                
-                except OSError as e:
-                    if Path(resolved_path).is_dir():
-                        continue
-    
-                    logger.warning(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
-
+                self.current_file = new_file
         
     async def setup(self, tg: TaskGroup, emit_event: Queue[Event]):
         self.task = tg.create_task(self._task(emit_event))

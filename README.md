@@ -1,7 +1,7 @@
 # wakapi-anyide
 Log your coding time against any WakaTime-like server.
 
-![](thing.png)
+![](header.png)
 
 > [!NOTE]
 > Teenager? Check out [High Seas](https://highseas.hackclub.com/)!

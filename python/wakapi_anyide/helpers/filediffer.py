@@ -41,6 +41,14 @@ class File:
                     await file.read(),
                     size
                 )
+    
+    @classmethod
+    def empty(cls, path: str):
+        return cls(
+            path,
+            b"",
+            0
+        )
 
 
 def index_to_linecol(file: str, index: int):
