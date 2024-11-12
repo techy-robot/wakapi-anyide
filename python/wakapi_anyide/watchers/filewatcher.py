@@ -81,7 +81,7 @@ class FileWatcher(Watcher):
                 continue
             
             # read file and add to the cache
-            file = await File.read(resolved_path)
+            file = await FileMetadata.read(resolved_path)
             
             self.cache[resolved_path] = await FileMetadata.read(resolved_path)
             logger.info(f"Test {format_file(self.cache[resolved_path])}")
@@ -117,7 +117,7 @@ class FileWatcher(Watcher):
                     logger.info(f"New file found: {format_file(new_file)} ")
                     
                     # add the file to the cache only for the diffing, making sure it is empty
-                    self.cache[resolved_path] = File.empty(resolved_path)
+                    self.cache[resolved_path] = FileMetadata.empty(resolved_path)
             
                 # Now, add the file to be processed
                 self.current_file = new_file
