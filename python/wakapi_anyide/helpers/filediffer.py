@@ -29,7 +29,8 @@ class FileMetadata:
         
         async with open(path, 'rb') as file: # Problem right here: Its reading in binary mode
             line = 0
-            checksum = sha256(await file.read()).hexdigest()
+            filebytes: bytes = await file.read()
+            checksum = sha256(filebytes).hexdigest()
             binary = False
             """ def _count_generator(reader):
                 b = reader(1024 * 1024)
@@ -44,14 +45,10 @@ class FileMetadata:
                 # count each \n
                 # line = sum(buffer.count(b'\n') for buffer in c_generator) +1
                 
-                # WHY ON EARTH is the line count not working, no matter what I try?
-                
-                filearray = await file.read()
-                filedecoded = filearray.decode()
+                                
+                filedecoded = filebytes.decode()
                 filelines = filedecoded.splitlines()
                 line = len(filelines)
-                
-                logger.info('Line count:', line)
                 
             except UnicodeDecodeError:
                 line = (await getsize(path)) / 100 # Read file size in bytes instead of line count. Estimate 100 bytes a line
