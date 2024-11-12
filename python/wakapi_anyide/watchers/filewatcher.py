@@ -80,8 +80,6 @@ class FileWatcher(Watcher):
             if excluded_paths.match_file(resolved_path):
                 continue
             
-            file = await FileMetadata.read(resolved_path)
-            #Determine all the file properties during reading
             # read file and add to the cache
             file = await File.read(resolved_path)
             
