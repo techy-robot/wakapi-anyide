@@ -1,8 +1,6 @@
 # wakapi-anyide
 Log your coding time against any WakaTime-like server.
 
-![](header.png)
-
 > [!NOTE]
 > Teenager? Check out [High Seas](https://highseas.hackclub.com/)!
 
@@ -36,7 +34,7 @@ These instructions are best run in an existing project.
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.6.3
+  # https://github.com/iamawatermelo/wakapi-anyide v0.6.4
   
   [wakapi-anyide]
   version = 1  # don't change this
