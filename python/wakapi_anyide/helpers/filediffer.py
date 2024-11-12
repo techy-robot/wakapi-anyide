@@ -66,7 +66,7 @@ class FileMetadata:
             path,
             0,
             "",
-            false
+            False
         )
 
 
@@ -84,14 +84,15 @@ def process_file_change(new_file: FileMetadata, old_file: FileMetadata, time: fl
     lines_removed = 0
     
     if new_file.checksum != old_file.checksum: # Compare checksums.If the file is modified, generate a baseline random line diff
-        logger.info(f"File modified: {filename}")
         lines_added = random.randint(0, 20)
         lines_removed = random.randint(0, 20)
     
     # basic diff of either the linecount, or the byte count / 100 of the file 
     diff = new_file.linecount - old_file.linecount
-    lines_added = max(0, diff)
-    lines_removed = -min(0, diff)
+    
+    if diff != 0:# override the checksum random line diff if the file line count is actually different
+        lines_added = max(0, diff)
+        lines_removed = -min(0, diff)
 
     return Event(
         filename=filename,
