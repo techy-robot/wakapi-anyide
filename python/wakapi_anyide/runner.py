@@ -14,7 +14,6 @@ from typing import Dict
 
 from aiohttp import ClientResponse
 from aiohttp import request
-
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers import WATCHERS
 from wakapi_anyide.watchers.filewatcher import FileWatcher

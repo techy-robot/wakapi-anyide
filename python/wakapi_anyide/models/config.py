@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from pydantic.deprecated.class_validators import root_validator
 from pydantic_settings import BaseSettings
 from pydantic_settings.main import SettingsConfigDict
-
 from wakapi_anyide.helpers.ini import IniConfigSettingsSource
 
 

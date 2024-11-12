@@ -9,7 +9,6 @@ from typing import Dict
 
 from aiofiles import open
 from pathspec import PathSpec
-
 from wakapi_anyide._rust.watch import Watch
 from wakapi_anyide._rust.watch import WatchEventType
 from wakapi_anyide.helpers.filediffer import FileMetadata
@@ -160,4 +159,3 @@ class FileWatcher(Watcher):
                 except OSError as e:# it can't read the file, which means it was deleted in the intermission
                     logger.info(f"File deleted too fast: {path}")
                     continue
-        

@@ -1,16 +1,14 @@
 import difflib
 import logging
+import random
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 
 from aiofiles import open
 from aiofiles.ospath import getsize
-
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
-
-from hashlib import sha256
-import random
 
 logger = logging.getLogger(__name__)
 
