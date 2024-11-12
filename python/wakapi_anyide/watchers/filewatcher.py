@@ -103,11 +103,7 @@ class FileWatcher(Watcher):
                 
                 if self.cache.get(resolved_path) is None:
                     logger.info(f"New file found: {format_file(new_file)} ")
-                    self.cache[resolved_path] = File(
-                        resolved_path,
-                        b"",
-                        0
-                    )
+                    self.cache[resolved_path] = File.empty(resolved_path)
                 
                 if self.current_file is None:
                     self.current_file = new_file
@@ -117,8 +113,8 @@ class FileWatcher(Watcher):
                 if self.current_file.path != resolved_path:
                     logger.debug(f"File changed (was {self.current_file.path}, now {resolved_path})")
                     event = process_file_change(
-                        new_file=new_file,
-                        old_file=self.cache[resolved_path],
+                        new_file=self.current_file,
+                        old_file=self.cache[self.current_file.path],
                         time=time.time(),
                         env=self.env
                     )
