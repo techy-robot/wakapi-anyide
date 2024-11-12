@@ -67,6 +67,7 @@ class FileWatcher(Watcher):
         included_paths = PathSpec.from_lines('gitwildmatch', self.env.project.files.include)
         excluded_paths = PathSpec.from_lines('gitwildmatch', excluded_pathspecs)
     
+        # add the Rust watcher
         watch = Watch()
         watch.add_watch("./", True)
         
@@ -75,27 +76,36 @@ class FileWatcher(Watcher):
         for path in included_paths.match_tree('./'):
             resolved_path = self.normalise(Path('./').absolute() / Path(path))
             
+            # skip adding the file because its on the naughty list
             if excluded_paths.match_file(resolved_path):
                 continue
             
+            file = await FileMetadata.read(resolved_path)
             #Determine all the file properties during reading
+            # read file and add to the cache
+            file = await File.read(resolved_path)
             
             self.cache[resolved_path] = await FileMetadata.read(resolved_path)
             logger.info(f"Test {format_file(self.cache[resolved_path])}")
     
         logger.info("Watching!")
     
+        # all the events the Rust watcher returning
         async for ev_list in watch:
             for event in ev_list:
                 logger.debug(f"Got event: {event}")
                 resolved_path = self.normalise(Path(event.target))
-    
+                new_file = None # define the var for the whole loop iteration
+                
+                # check if we should ignore this file if its on the naughty list 
                 if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
                     continue
                 
+                # If the event is a delete event, overwrite the file with an empty file
                 if event.kind == WatchEventType.Delete:
                     new_file = FileMetadata.empty(resolved_path)
                 else:
+                    # Else, read the current file
                     try:
                         new_file = await FileMetadata.read(resolved_path)
                     except OSError as e:
@@ -104,34 +114,14 @@ class FileWatcher(Watcher):
                         
                         continue
                 
+                # If this event path is not recognized in the cache, its a new file
                 if self.cache.get(resolved_path) is None:
                     logger.info(f"New file found: {format_file(new_file)} ")
-                    self.cache[resolved_path] = FileMetadata(
-                        resolved_path,
-                        0,
-                        "",
-                        false
-                    )
-                
-                if self.current_file is None:
-                    self.current_file = new_file
                     
-                    continue
-                
-                if self.current_file.path != resolved_path:
-                    logger.debug(f"File changed (was {self.current_file.path}, now {resolved_path})")
-                    event = process_file_change(
-                        new_file=new_file,
-                        old_file=self.cache[resolved_path],
-                        time=time.time(),
-                        env=self.env
-                    )
-                    
-                    if event is not None:
-                        await queue.put(event)
-                    
-                    self.cache[resolved_path] = new_file
-                    
+                    # add the file to the cache only for the diffing, making sure it is empty
+                    self.cache[resolved_path] = File.empty(resolved_path)
+            
+                # Now, add the file to be processed
                 self.current_file = new_file
         
     async def setup(self, tg: TaskGroup, emit_event: Queue[Event]):
@@ -141,6 +131,7 @@ class FileWatcher(Watcher):
         pass
     
     async def resolve_events(self) -> AsyncGenerator[Event, None]:
+        # For every event in this watchers list, process the changes and compare
         if self.current_file is not None:
             event = process_file_change(
                 new_file=self.current_file,
@@ -149,10 +140,11 @@ class FileWatcher(Watcher):
                 env=self.env
             )
             
+            # Return the event, this is produces a generator, so resolve events can be iteratored
             if event is not None:
                 yield event
             
-            
+            # Clear the current file and reset the cache to the latest file.
             self.cache[self.current_file.path] = self.current_file
             self.current_file = None
             self.current_file_checksum = None

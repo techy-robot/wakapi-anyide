@@ -35,38 +35,26 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
     while not should_shutdown.is_set():
         changed_events: Dict[str, Event] = dict()
         
+        # wait until the next heartbeat due, processing events in the meantime
         while (due := next_heartbeat_due - time.time()) > 0 and not should_shutdown.is_set():
-            if fut is None or fut.done():
-                fut = asyncio.create_task(queue.get())
-            
+            # we don't want to block on getting an event if we're already processing one, so only get a new event if the previous one is done
             logger.debug(f"Next event due in {due}s")
-            
-            completed, rest = await asyncio.wait([
-                fut,
-                asyncio.create_task(should_shutdown.wait())
-            ], return_when=asyncio.FIRST_COMPLETED, timeout=due)  # type: ignore
-            
-            if fut in completed:
-                event = fut.result()
-
-                if env.is_test_only:
-                    logger.debug(f"Got event for {event.filename}!")
-
-                changed_events[event.filename] = event
         
         logger.debug("Processing heartbeats")
         
         next_heartbeat_due = time.time() + env.config.settings.heartbeat_rate_limit_seconds
         
+        # Adding to the events. Watchers is a list of individual programs
         for watcher in watchers:
             logger.debug(f"Getting events from {watcher}")
-            iterable = watcher.resolve_events()
+            iterable = watcher.resolve_events() # returns a generator
             logger.debug(f"Maybe iterable is {iterable}")
             
             if iterable is not None:           
                 async for event in iterable:
+                    # everything in the queue, process the event
                     changed_events[event.filename] = event
-                    logger.debug(f"Got event for {event.filename}")
+                    logger.info(f"Got event for {event.filename}")
         
         logger.debug(changed_events)
         

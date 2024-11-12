@@ -14,7 +14,7 @@ class Settings(BaseModel):
     api_key_vault_cmd: str | None = None
     api_url: str = "https://api.wakatime.com/api/v1"
     hostname: str | None = None
-    heartbeat_rate_limit_seconds: int = 120
+    heartbeat_rate_limit_seconds: int = 10
     
     @root_validator(pre=True)
     def validate_api_key(cls, values):
