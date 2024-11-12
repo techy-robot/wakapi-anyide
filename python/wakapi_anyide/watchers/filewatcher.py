@@ -92,7 +92,6 @@ class FileWatcher(Watcher):
     
                 if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
                     continue
-                    self.cache[resolved_path] = 
                 
                 if event.kind == WatchEventType.Delete:
                     new_file = File.empty(resolved_path)
