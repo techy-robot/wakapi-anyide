@@ -92,64 +92,48 @@ class FileWatcher(Watcher):
     
                 if not included_paths.match_file(resolved_path) or excluded_paths.match_file(resolved_path):
                     continue
-    
-                try: #try to read the file, otherwise it must have been deleted
-                    new_file = await FileMetadata.read(resolved_path)
-                    logger.info(f"path: {resolved_path}")
-                    
-                    # Update the current file. Not really sure why this is needed.
+                    self.cache[resolved_path] = 
+                
+                if event.kind == WatchEventType.Delete:
+                    new_file = File.empty(resolved_path)
+                else:
+                    try:
+                        new_file = await File.read(resolved_path)
+                    except OSError as e:
+                        if not Path(resolved_path).is_dir():
+                            logger.warning(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
+                        
+                        continue
+                
+                if self.cache.get(resolved_path) is None:
+                    logger.info(f"New file found: {format_file(new_file)} ")
+                    self.cache[resolved_path] = File(
+                        resolved_path,
+                        0,
+                        "",
+                        false
+                    )
+                
+                if self.current_file is None:
                     self.current_file = new_file
                     
-                    if self.cache.get(resolved_path) is None:
-                        logger.info(f"New file found: {format_file(new_file)} ")
-                        self.cache[resolved_path] = new_file
-                        
-                        event = process_file_change(
-                            new_file=new_file,
-                            old_file=FileMetadata(resolved_path, 0, None, new_file.binary),
-                            time=time.time(),
-                            env=self.env
-                        )
-                        
-                        # add to queue
-                        if event is not None:
-                            await queue.put(event)
-                    
-                    if self.current_file.path != resolved_path:
-                        logger.debug(f"File changed (was {self.current_file.path}, now {resolved_path})")
-                        event = process_file_change(
-                            new_file=new_file,
-                            old_file=self.cache[resolved_path],
-                            time=time.time(),
-                            env=self.env
-                        )
-                        
-                        if event is not None:
-                            await queue.put(event)
-                        
-                        # Update the cache
-                        self.cache[resolved_path] = new_file
+                    continue
                 
-                except OSError as e: # file must have been deleted
-                    if Path(resolved_path).is_dir():
-                        continue
-                    
+                if self.current_file.path != resolved_path:
+                    logger.debug(f"File changed (was {self.current_file.path}, now {resolved_path})")
                     event = process_file_change(
-                        new_file=FileMetadata(resolved_path, 0, None, False),
+                        new_file=new_file,
                         old_file=self.cache[resolved_path],
                         time=time.time(),
                         env=self.env
                     )
                     
-                    # Deleting the file from cache
-                    del self.cache[resolved_path]
-                    logger.info(f"Deleted {resolved_path} from cache")
-                    
                     if event is not None:
                         await queue.put(event)
-
-                    continue
-
+                    
+                    self.cache[resolved_path] = new_file
+                    
+                self.current_file = new_file
         
     async def setup(self, tg: TaskGroup, emit_event: Queue[Event]):
         self.task = tg.create_task(self._task(emit_event))

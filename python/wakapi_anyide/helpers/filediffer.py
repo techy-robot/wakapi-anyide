@@ -63,6 +63,14 @@ class FileMetadata:
                 checksum,
                 binary
             )
+    @classmethod
+    def empty(cls, path: str):
+        return cls(
+            path,
+            0,
+            "",
+            false
+        )
 
 
 def process_file_change(new_file: FileMetadata, old_file: FileMetadata, time: float, env: Environment) -> Event | None:
