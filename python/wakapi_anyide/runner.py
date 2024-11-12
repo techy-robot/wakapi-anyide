@@ -49,8 +49,7 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             if fut in completed:
                 event = fut.result()
 
-                if env.is_test_only:
-                    logger.debug(f"Got event for {event.filename}!")
+                logger.debug(f"Got event for {event.filename}!")
 
                 changed_events[event.filename] = event
         
