@@ -88,8 +88,8 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             "project": env.project.project.name,
             "language": language_processor(env, event.file_extension),
             "lines": event.lines,
-            **({"line_additions": event.lines_added} if event.lines_added is not None else {}), # dict comprehension
-            **({"line_deletions": event.lines_removed} if event.lines_removed is not None else {}),
+            "line_additions": event.lines_added,
+            "line_deletions": event.lines_removed,
             "lineno": event.cursor[0],
             "cursorpos": event.cursor[1],
             "is_write": True,

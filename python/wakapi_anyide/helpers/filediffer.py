@@ -222,8 +222,8 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
                     raise Exception(f"Unknown opcode {op}")
 
         new_file_lines = new_file_str.splitlines()
-        added_lines = None
-        deleted_lines = None
+        added_lines = 0
+        deleted_lines = 0
         # finding changed lines
         for op in difflib.SequenceMatcher(a=old_file_str.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
             match op:
@@ -255,8 +255,8 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
             logger.info(f"Ignored file {filename}")
             return
 
-        added_lines = None
-        deleted_lines = None
+        added_lines = 0
+        deleted_lines = 0
         last_index = 0
         for op in difflib.SequenceMatcher(a=old_file.body, b=new_file.body, autojunk=False).get_opcodes():
             match op:
