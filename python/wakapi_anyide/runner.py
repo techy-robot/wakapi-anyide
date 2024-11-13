@@ -134,7 +134,7 @@ async def run(env: Environment):
     runners = [WATCHERS[watcher](env) for watcher in env.project.meta.watchers]
     emit_events: Queue[Event] = Queue()
     should_shutdown = asyncio.Event()
-    task: Future
+    task: Future | None = None
     
     try:
         async with TaskGroup() as tg:
@@ -160,6 +160,7 @@ async def run(env: Environment):
             task.add_done_callback(done_callback)
     except KeyboardInterrupt:
         pass
-    
-    should_shutdown.set()
-    await task
+    finally:
+        should_shutdown.set()
+        if task is not None:
+            await task

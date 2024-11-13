@@ -76,21 +76,11 @@ Verbose: TypeAlias = Annotated[bool, typer.Option("--verbose", callback=setup_lo
 
 
 def start(is_test):
-    while True:
-        try:
-            asyncio.run(run(Environment(
-                is_test_only=is_test,
-                config=WakatimeConfig(),  # type: ignore
-                project=Project()  # type: ignore
-            )))
-        except ConfigInvalidatedException:
-            logger.warning(f"Detected config change, restarting in 1s")
-            time.sleep(1)
-            continue
-        except KeyboardInterrupt:
-            break
-        
-        break
+    asyncio.run(run(Environment(
+        is_test_only=is_test,
+        config=WakatimeConfig(),  # type: ignore
+        project=Project()  # type: ignore
+    )))
 
 
 @app.command()
