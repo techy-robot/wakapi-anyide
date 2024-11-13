@@ -17,6 +17,7 @@ from wakapi_anyide.helpers.filediffer import process_file_change
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
 from wakapi_anyide.watchers.types import Watcher
+from wakapi_anyide.helpers.filediffer import human_to_bytes
 
 logger = logging.getLogger()
 
@@ -29,11 +30,10 @@ def bytes_to_human(size: int):
             return f"{(size / (1024**i)):.2f} {suffix}"
     
     return f"{(size / 1024**6):.2f} PiB"
-    
 
-def format_file(file: File):
-    color = "red" if file.too_large else "bright_black"
-    extra = "  [yellow]Large file[/yellow]" if file.too_large else ""
+def format_file(file: File, max_size: int=0):
+    color = "red" if file.too_large(max_size) else "bright_black"
+    extra = "  [yellow]Large file[/yellow]" if file.too_large(max_size) else ""
     return(f"{file.path}  [{color}]{bytes_to_human(file.size)}[/{color}]{extra}")
 
 
@@ -56,6 +56,7 @@ class FileWatcher(Watcher):
         
     async def _task(self, queue: Queue[Event]):
         excluded_pathspecs = self.env.project.files.exclude.copy()
+        max_size = human_to_bytes(self.env.project.files.large_file_threshold)
     
         for file in self.env.project.files.exclude_files:
             async with open(file, 'r') as file:
@@ -82,7 +83,7 @@ class FileWatcher(Watcher):
                 continue
             
             self.cache[resolved_path] = file
-            logger.info(f"  {format_file(file)}")
+            logger.info(f"  {format_file(file, max_size)}")
     
         logger.info("Watching!")
     
@@ -106,7 +107,7 @@ class FileWatcher(Watcher):
                         continue
                 
                 if self.cache.get(resolved_path) is None:
-                    logger.info(f"New file found: {format_file(new_file)} ")
+                    logger.info(f"New file found: {format_file(new_file, max_size)} ")
                     self.cache[resolved_path] = File.empty(resolved_path)
                 
                 if self.current_file is None:

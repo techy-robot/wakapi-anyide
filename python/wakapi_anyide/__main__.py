@@ -22,7 +22,7 @@ TEMPLATE = """
 # https://github.com/iamawatermelo/wakapi-anyide v{version}
 
 [meta]
-version = 1
+version = 2
 watchers = ['files']
 
 [files]
@@ -31,6 +31,8 @@ exclude = {exclude}  # files to exclude in tracking
 exclude_files = {exclude_files}  # files whose contents will be used to exclude other files from tracking
 exclude_binary_files = true  # whether to ignore binary files
 # language_mapping = {{".kicad_sch" = "Kicad Schematic"}} # custom language mapping
+large_file_threshold = "64KiB" # files larger than this will not do precise line diffing, it will only count total lines. 
+# It is recommended to set the threshold to 0 for thousands of files, because they are all stored in RAM
 
 [project]
 name = "{name}"  # your project name

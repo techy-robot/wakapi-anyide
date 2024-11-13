@@ -1,5 +1,6 @@
 import difflib
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from hashlib import sha256
@@ -12,9 +13,6 @@ from wakapi_anyide.watchers.types import Event
 
 logger = logging.getLogger(__name__)
 
-SIZE_MAX = 2**16
-
-
 @dataclass
 class File:
     path: str
@@ -25,8 +23,8 @@ class File:
     body: bytes
     
 
-    def too_large(self, env_max_size: int):
-        return self.size > env_max_size
+    def too_large(self, max_size: int=0):
+        return self.size > max_size
     
     # reads through the file as chunks, to be iterated over
     async def _block_generator(filechunks, size=256*256):
@@ -71,7 +69,7 @@ class File:
         return file_hash.hexdigest()
     
     @classmethod
-    async def read(cls, path: str):
+    async def read(cls, path: str, max_size: int=0):
         """
         Reads a file from the given path and returns a File object encapsulating its metadata.
 
@@ -103,29 +101,30 @@ class File:
             line_count = 0
             size = await getsize(path)
             
-            # TODO: Check if binary too large according to user settings, and skip reading and calculate. 
-            
             # TODO: Improve efficiency by reading the file only once, not 3 times for content, checksum, and lines.
             
-            filebytes: bytes = await file.read()
-            checksum = await cls.calculate_checksum(file)
-            print(f"checksum: {checksum}")
+            filebytes: bytes = None
             binary = False
             
-            # Splits out file blocks to save memory as it counts lines
-
+            # if the file is small enough, read it all into memory
+            if size <= max_size:
+                filebytes: bytes = await file.read()
+            
+            # We can't be sure that the file will be read above, so we need to check if it is binary separately and calculate the line count
             try:
-                # we might want to support any encoding type in the future. This will suffice though just to detect an error
+                # test the first 512 bytes to see if it can be decoded as text
+                filedecoded = await file.read(512).decode()
                 
-                filedecoded = filebytes.decode()
-                               
                 # Read line count without loading the wholefile into memory
-                line_count = await cls._count(cls, file)        
-                print(f"line count: {line_count}")
-                
+                line_count = await cls._count(cls, file) 
+                            
             except UnicodeDecodeError:
                 line_count = (size) / 100 # Read file size in bytes instead of line count. Estimate 100 bytes a line
-                binary = True
+                binary = True 
+            
+            # Calculate checksum without loading the wholefile into memory
+            checksum = await cls.calculate_checksum(file)
+              
                 
             return cls(
                 path,
@@ -165,22 +164,35 @@ def index_to_linecol(file: str, index: int):
     return line + 1, col + 1
 
 
+def human_to_bytes(size: str) -> int:
+    for i, suffix in enumerate(["B", "KiB", "MiB", "GiB", "TiB"]):
+        if size.endswith(suffix):
+            
+            # Splitting text and number in string
+            res = [re.findall(r'(\w+?)(\d+)', size)[0] ]
+            number = res[0]
+            return int(number[0]) * (1024 ** i)
+    raise ValueError("Invalid size format")
+
+
 def process_file_change(new_file: File, old_file: File, time: float, env: Environment) -> Event | None:
     filename = new_file.path
     file_extension = Path(new_file.path).suffix
+    max_size = human_to_bytes(env.project.files.large_file_threshold)
     
-    if new_file.too_large(SIZE_MAX) or old_file.too_large(SIZE_MAX):
-        diff = new_file.size - old_file.size
+    if new_file.too_large(max_size) or old_file.too_large(max_size):
+        diff = new_file.linecount - old_file.linecount
+            
         lines_added = max(0, diff)
         lines_removed = -min(0, diff)
         
         return Event(
-            filename=f"{filename}#wakapi-anyide-toolarge",
+            filename=filename,
             file_extension=file_extension,
             cursor=(0, 0),
             lines_added=lines_added,
             lines_removed=lines_removed,
-            lines=new_file.size,
+            lines=new_file.linecount,
             time=time
         )
     
