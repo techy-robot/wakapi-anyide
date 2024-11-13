@@ -22,7 +22,7 @@ TEMPLATE = """
 # https://github.com/iamawatermelo/wakapi-anyide v{version}
 
 [meta]
-version = 2
+version = 1
 watchers = ['files']
 
 [files]
