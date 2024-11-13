@@ -22,10 +22,11 @@ class File:
     checksum: str
     binary: bool
     body: bytes
+    max_size: int=65536
     
-
-    def too_large(self, max_size: int=65536):
-        return self.size > max_size
+    @property
+    def too_large(self):
+        return self.size > self.max_size
     
     # reads through the file as chunks, to be iterated over
     async def _block_generator(filechunks, size=256*256):
@@ -70,7 +71,7 @@ class File:
         return file_hash.hexdigest()
     
     @classmethod
-    async def read(cls, path: str, max_size: int=65536):
+    async def read(self, path: str):
         """
         Reads a file from the given path and returns a File object encapsulating its metadata.
 
@@ -108,7 +109,7 @@ class File:
             binary = False
             
             # if the file is small enough, read it all into memory
-            if size <= max_size:
+            if size <= self.max_size:
                 filebytes: bytes = await file.read()
             
             # We can't be sure that the file will be read above, so we need to check if it is binary separately and calculate the line count
@@ -119,37 +120,39 @@ class File:
                 filedecoded = filedecoded.decode()
                 
                 # Read line count without loading the wholefile into memory
-                line_count = await cls._count(cls, file) 
+                line_count = await self._count(self, file) 
                             
             except UnicodeDecodeError:
                 line_count = size # Read file size in bytes instead of line count.
                 binary = True 
             
             # Calculate checksum without loading the wholefile into memory
-            checksum = await cls.calculate_checksum(file)
+            checksum = await self.calculate_checksum(file)
               
                 
-            return cls(
+            return self(
                 path,
                 line_count,
                 size,
                 checksum,
                 binary,
-                filebytes
+                filebytes,
+                self.max_size
             )
     
     @classmethod
-    def empty(cls, path: str):
+    def empty(self, path: str):
         """
         Create a File object that represents an empty file.
         """
-        return cls(
+        return self(
             path,
             0,
             0,
             "",
             False,
-            b""
+            b"",
+            self.max_size
         )
 
 
@@ -183,7 +186,7 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
     file_extension = Path(new_file.path).suffix
     max_size = human_to_bytes(env.project.files.large_file_threshold)
     
-    if new_file.too_large(max_size) or old_file.too_large(max_size):
+    if new_file.too_large or old_file.too_large:
         diff = new_file.linecount - old_file.linecount
         lines_added = max(0, diff)
         lines_removed = -min(0, diff)
