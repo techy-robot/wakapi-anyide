@@ -122,7 +122,7 @@ class File:
                 line_count = await cls._count(cls, file) 
                             
             except UnicodeDecodeError:
-                line_count = (size) / 100 # Read file size in bytes instead of line count. Estimate 100 bytes a line
+                line_count = size # Read file size in bytes instead of line count.
                 binary = True 
             
             # Calculate checksum without loading the wholefile into memory
@@ -187,10 +187,10 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
         diff = new_file.linecount - old_file.linecount
         lines_added = max(0, diff)
         lines_removed = -min(0, diff)
-        # rough estimate, if the file is different but total line count didn't change, fudge some numbers
+        # if the file is different but total line count didn't change, report NONE
         if diff == 0 and new_file.checksum != old_file.checksum:
-            lines_added = random.randint(0, 20)
-            lines_removed = random.randint(0, 20)
+            lines_added = None
+            lines_removed = None
             
         return Event(
             filename=f"{filename}#wakapi-anyide-toolarge", # specify that this file is handled differently. Shows up on dashboard
@@ -222,8 +222,8 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
                     raise Exception(f"Unknown opcode {op}")
 
         new_file_lines = new_file_str.splitlines()
-        added_lines = 0
-        deleted_lines = 0
+        added_lines = None
+        deleted_lines = None
         # finding changed lines
         for op in difflib.SequenceMatcher(a=old_file_str.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
             match op:
@@ -255,8 +255,8 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
             logger.info(f"Ignored file {filename}")
             return
 
-        added_lines = 0
-        deleted_lines = 0
+        added_lines = None
+        deleted_lines = None
         last_index = 0
         for op in difflib.SequenceMatcher(a=old_file.body, b=new_file.body, autojunk=False).get_opcodes():
             match op:
