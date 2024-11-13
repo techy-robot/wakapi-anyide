@@ -1,6 +1,7 @@
 import difflib
 import logging
 import re
+import random
 from dataclasses import dataclass
 from pathlib import Path
 from hashlib import sha256
@@ -188,8 +189,8 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
         lines_removed = -min(0, diff)
         # rough estimate, if the file is different but total line count didn't change, fudge some numbers
         if diff == 0 and new_file.checksum != old_file.checksum:
-            lines_added = rand.randint(0, 20)
-            lines_removed = rand.randint(0, 20)
+            lines_added = random.randint(0, 20)
+            lines_removed = random.randint(0, 20)
             
         return Event(
             filename=filename,

@@ -9,7 +9,8 @@ authors = [
     {name = "Sarah C"}
 ]
 maintainers = [
-    {name = "Sarah C"}
+    {name = "Sarah C"},
+    {name = "Asher E"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
