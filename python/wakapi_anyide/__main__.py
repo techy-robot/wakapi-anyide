@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import time
 from json import dumps
 from pathlib import Path
 from typing import Annotated
@@ -31,7 +30,7 @@ include = {include}  # files to include in tracking
 exclude = {exclude}  # files to exclude in tracking
 exclude_files = {exclude_files}  # files whose contents will be used to exclude other files from tracking
 exclude_binary_files = true  # whether to ignore binary files
-language_mapping = {{".kicad_sch" = "Kicad Schematic"}} # custom language mapping, have the extension as the key and the language name as the value. You can also deal with this in the online dashboard instead.
+# language_mapping = {{".kicad_sch" = "Kicad Schematic"}} # custom language mapping
 
 [project]
 name = "{name}"  # your project name
@@ -76,19 +75,11 @@ Verbose: TypeAlias = Annotated[bool, typer.Option("--verbose", callback=setup_lo
 
 
 def start(is_test):
-    while True:
-        try:
-            asyncio.run(run(Environment(
-                is_test_only=is_test,
-                config=WakatimeConfig(),  # type: ignore
-                project=Project()  # type: ignore
-            )))
-        except ConfigInvalidatedException:
-            logger.warning(f"Detected config change, restarting in 1s")
-            time.sleep(1)
-            continue
-        except KeyboardInterrupt:
-            break
+    asyncio.run(run(Environment(
+        is_test_only=is_test,
+        config=WakatimeConfig(),  # type: ignore
+        project=Project()  # type: ignore
+    )))
 
 
 @app.command()
@@ -99,7 +90,11 @@ def test(verbose: Verbose = False):
 @app.command()
 def track(verbose: Verbose = False):
     start(False)
-    
+
+
+@app.command()
+def version():
+    print(f"wakapi-anyide v{__version__}")
 
 def prompt(prompt, default: str | None = None):
     try:

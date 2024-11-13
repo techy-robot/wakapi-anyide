@@ -75,7 +75,11 @@ class FileWatcher(Watcher):
             if excluded_paths.match_file(resolved_path):
                 continue
             
-            file = await File.read(resolved_path)
+            try:
+                file = await File.read(resolved_path)
+            except Exception as e:
+                logger.error(e)
+                continue
             
             self.cache[resolved_path] = file
             logger.info(f"  {format_file(file)}")
@@ -143,7 +147,6 @@ class FileWatcher(Watcher):
             
             if event is not None:
                 yield event
-            
             
             self.cache[self.current_file.path] = self.current_file
             self.current_file = None
