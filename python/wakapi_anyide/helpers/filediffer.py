@@ -113,7 +113,9 @@ class File:
             # We can't be sure that the file will be read above, so we need to check if it is binary separately and calculate the line count
             try:
                 # test the first 512 bytes to see if it can be decoded as text
-                filedecoded = await file.read(512).decode()
+                await file.seek(0)
+                filedecoded = await file.read(512)
+                filedecoded = filedecoded.decode()
                 
                 # Read line count without loading the wholefile into memory
                 line_count = await cls._count(cls, file) 
@@ -165,13 +167,13 @@ def index_to_linecol(file: str, index: int):
 
 
 def human_to_bytes(size: str) -> int:
-    for i, suffix in enumerate(["B", "KiB", "MiB", "GiB", "TiB"]):
+    for i, suffix in enumerate(["KiB", "MiB", "GiB", "TiB"]):
         if size.endswith(suffix):
             
             # Splitting text and number in string
-            res = [re.findall(r'(\w+?)(\d+)', size)[0] ]
+            res = re.findall(r'(\d+)(\w+?)', size)[0]
             number = res[0]
-            return int(number[0]) * (1024 ** i)
+            return int(number) * (1024**(i+1))
     raise ValueError("Invalid size format")
 
 
