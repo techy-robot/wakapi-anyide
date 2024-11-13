@@ -2,6 +2,7 @@ import difflib
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from hashlib import sha256
 
 from aiofiles import open
 from aiofiles.ospath import getsize
@@ -23,12 +24,77 @@ class File:
     binary: bool
     body: bytes
     
-    @property
+
     def too_large(self, env_max_size: int):
         return self.size > env_max_size
     
+    # reads through the file as chunks, to be iterated over
+    async def _block_generator(filechunks, size=256*256):
+        """
+        Reads the file in chunks of size `size`, and yields each chunk.
+        Use this generator to iterate over the file in chunks without loading the whole file into memory.
+        """
+        
+        while True:
+            b = await filechunks.read(size)
+            if not b:
+                break
+            yield b
+    async def _count(cls, file):
+        """
+        Count the number of newlines in a file, without loading the whole file into memory.
+        """
+        
+        count = 0
+        await file.seek(0)# reset file after potentially reading the first time
+        # count each \n
+        async for bl in cls._block_generator(file):
+            count += bl.count(b"\n")
+        return count
+    
+    async def calculate_checksum(file):
+        """
+        Reads the file in chunks and calculates its SHA256 checksum.
+
+        Args:
+            file: An open file object (in binary mode) to read the checksum from.
+
+        Returns:
+            A hex string representing the checksum of the file content.
+        """
+        # At some point I might want to support calling this function in the main program.
+        
+        await file.seek(0)# reset file after potentially reading the first time
+        file_hash = sha256()
+        while chunk := await file.read(8192):
+            file_hash.update(chunk)
+        return file_hash.hexdigest()
+    
     @classmethod
     async def read(cls, path: str):
+        """
+        Reads a file from the given path and returns a File object encapsulating its metadata.
+
+        The function opens the file in binary mode and calculates the following metadata:
+        - path: The file path.
+        - linecount: The number of lines in the file, or an estimated count if the file is binary.
+        - size: The size of the file in bytes.
+        - checksum: The SHA256 checksum of the file content.
+        - binary: A boolean indicating whether the file is binary.
+        - body: The raw bytes content of the file.
+
+        Note:
+            The function reads the file multiple times for content, checksum, and line count,
+            which may affect performance for large files. This is a known issue to be addressed.
+            If the file cannot be decoded as a text file, it is treated as a binary file, and
+            an estimated line count is calculated based on file size.
+
+        Args:
+            path (str): The path to the file to be read.
+
+        Returns:
+            File: An instance of the File class containing the metadata of the file.
+        """
         size = await getsize(path)
         
         #  Reads the file contents and returns the important metadata on it, but no content
@@ -38,26 +104,24 @@ class File:
             size = await getsize(path)
             
             # TODO: Check if binary too large according to user settings, and skip reading and calculate. 
+            
+            # TODO: Improve efficiency by reading the file only once, not 3 times for content, checksum, and lines.
+            
             filebytes: bytes = await file.read()
-            checksum = sha256(filebytes).hexdigest()
+            checksum = await cls.calculate_checksum(file)
+            print(f"checksum: {checksum}")
             binary = False
-            """ def _count_generator(reader):
-                b = reader(1024 * 1024)
-                while b:
-                    yield b
-                    b = reader(1024 * 1024) """
+            
+            # Splits out file blocks to save memory as it counts lines
+
             try:
                 # we might want to support any encoding type in the future. This will suffice though just to detect an error
                 
-                # Read line count without loading the file into memory
-                # c_generator = _count_generator(file.raw.read)
-                # count each \n
-                # line = sum(buffer.count(b'\n') for buffer in c_generator) +1
-                
-                                
                 filedecoded = filebytes.decode()
-                filelines = filedecoded.splitlines()
-                line_count = len(filelines)
+                               
+                # Read line count without loading the wholefile into memory
+                line_count = await cls._count(cls, file)        
+                print(f"line count: {line_count}")
                 
             except UnicodeDecodeError:
                 line_count = (size) / 100 # Read file size in bytes instead of line count. Estimate 100 bytes a line
@@ -68,16 +132,21 @@ class File:
                 line_count,
                 size,
                 checksum,
-                binary
+                binary,
+                filebytes
             )
     
     @classmethod
     def empty(cls, path: str):
+        """
+        Create a File object that represents an empty file.
+        """
         return cls(
             path,
             0,
             0,
             "",
+            False,
             b""
         )
 
@@ -100,7 +169,7 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
     filename = new_file.path
     file_extension = Path(new_file.path).suffix
     
-    if new_file.too_large or old_file.too_large:
+    if new_file.too_large(SIZE_MAX) or old_file.too_large(SIZE_MAX):
         diff = new_file.size - old_file.size
         lines_added = max(0, diff)
         lines_removed = -min(0, diff)
