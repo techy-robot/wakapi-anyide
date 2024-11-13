@@ -74,6 +74,7 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
 
         logger.info(f"Change summary:")
         for event in changed_events.values():
+            #:20 strips the hashtag from the filename for better viewing. It shows up on the dashboard still
             logger.info(f"{event.filename:20} at {event.cursor[0]}:{event.cursor[1]} +{event.lines_added} -{event.lines_removed}")
 
         host = uname()

@@ -193,7 +193,7 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
             lines_removed = random.randint(0, 20)
             
         return Event(
-            filename=filename,
+            filename=f"{filename}#wakapi-anyide-toolarge", # specify that this file is handled differently. Shows up on dashboard
             file_extension=file_extension,
             cursor=(0, 0),
             lines_added=lines_added,
@@ -276,8 +276,8 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
                     raise Exception(f"Unknown opcode {op}")
 
         return Event(
-            filename=filename,
-            file_extension=f"{filename}#wakapi-anyide-binaryfile", # custom handling for binary files
+            filename=f"{filename}#wakapi-anyide-binaryfile", # specify that this file is a binary. Shows up on dashboard
+            file_extension=file_extension, 
             cursor=(1, last_index),
             lines_added=added_lines,
             lines_removed=deleted_lines,
