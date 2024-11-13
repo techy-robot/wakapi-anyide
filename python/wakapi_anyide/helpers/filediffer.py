@@ -184,10 +184,13 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
     
     if new_file.too_large(max_size) or old_file.too_large(max_size):
         diff = new_file.linecount - old_file.linecount
-            
         lines_added = max(0, diff)
         lines_removed = -min(0, diff)
-        
+        # rough estimate, if the file is different but total line count didn't change, fudge some numbers
+        if diff == 0 and new_file.checksum != old_file.checksum:
+            lines_added = rand.randint(0, 20)
+            lines_removed = rand.randint(0, 20)
+            
         return Event(
             filename=filename,
             file_extension=file_extension,
@@ -198,11 +201,12 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
             time=time
         )
     
-    try:
+    # Both files are text files
+    if not new_file.binary and not old_file.binary:
         new_file_str = new_file.body.decode()
         old_file_str = old_file.body.decode()
-
         last_index = 0
+        # finding rough cursor postion
         for op in difflib.SequenceMatcher(a=old_file_str, b=new_file_str, autojunk=False).get_opcodes():
             match op:
                 case ('replace', _, _, _, j2):
@@ -219,6 +223,7 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
         new_file_lines = new_file_str.splitlines()
         added_lines = 0
         deleted_lines = 0
+        # finding changed lines
         for op in difflib.SequenceMatcher(a=old_file_str.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
             match op:
                 case ('replace', i1, i2, j1, j2):
@@ -241,10 +246,10 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
             cursor=(line, col),
             lines_added=added_lines,
             lines_removed=deleted_lines,
-            lines=len(new_file_lines),
+            lines=new_file.linecount,
             time=time
         )
-    except UnicodeDecodeError:
+    else:  # One of the files is binary
         if env.project.files.exclude_binary_files:
             logger.info(f"Ignored file {filename}")
             return
@@ -275,6 +280,6 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
             cursor=(1, last_index),
             lines_added=added_lines,
             lines_removed=deleted_lines,
-            lines=len(new_file.body),
+            lines=new_file.linecount,
             time=time
         )
