@@ -1,10 +1,10 @@
 import difflib
 import logging
-import re
 import random
+import re
 from dataclasses import dataclass
-from pathlib import Path
 from hashlib import sha256
+from pathlib import Path
 
 from aiofiles import open
 from aiofiles.ospath import getsize

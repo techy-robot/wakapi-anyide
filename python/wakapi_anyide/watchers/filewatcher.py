@@ -13,11 +13,11 @@ from pathspec import PathSpec
 from wakapi_anyide._rust.watch import Watch
 from wakapi_anyide._rust.watch import WatchEventType
 from wakapi_anyide.helpers.filediffer import File
+from wakapi_anyide.helpers.filediffer import human_to_bytes
 from wakapi_anyide.helpers.filediffer import process_file_change
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
 from wakapi_anyide.watchers.types import Watcher
-from wakapi_anyide.helpers.filediffer import human_to_bytes
 
 logger = logging.getLogger()
 
