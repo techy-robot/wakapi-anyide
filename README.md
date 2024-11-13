@@ -34,20 +34,21 @@ These instructions are best run in an existing project.
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.6.5
+  # https://github.com/iamawatermelo/wakapi-anyide v0.6.6
   
-  [wakapi-anyide]
-  version = 1  # don't change this
+  [meta]
+  version = 1
+  watchers = ['files']
   
   [files]
-  include = ["/python/**/*.py", "/*.toml"]  # files to include in tracking (ie /src)
-  exclude = ["/.venv"]  # files to exclude in tracking (ie /node_modules)
+  include = ["*"]  # files to include in tracking
+  exclude = []  # files to exclude in tracking
   exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
-  exclude_binary_files = true
-  
+  exclude_binary_files = true  # whether to ignore binary files
+  # language_mapping = {".kicad_sch" = "Kicad Schematic"}  # custom language mapping
   
   [project]
-  name = "wakapi-anyide"  # your project name
+  name = "test2"  # your project name
   ```
 
 - Run `wakapi-anyide test` in the same directory you have `wak.toml` in.
