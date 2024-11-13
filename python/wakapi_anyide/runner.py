@@ -147,6 +147,7 @@ async def run(env: Environment):
             task = ev.create_task(heartbeat_task(env, emit_events, runners, should_shutdown))
             
             def done_callback(task: Task):
+                logger.debug(task)
                 try:
                     exc = task.exception()
                 except CancelledError:

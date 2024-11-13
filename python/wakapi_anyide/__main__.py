@@ -89,6 +89,8 @@ def start(is_test):
             continue
         except KeyboardInterrupt:
             break
+        
+        break
 
 
 @app.command()
