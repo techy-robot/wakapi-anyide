@@ -13,6 +13,7 @@ from pathspec import PathSpec
 from wakapi_anyide._rust.watch import Watch
 from wakapi_anyide._rust.watch import WatchEventType
 from wakapi_anyide.helpers.filediffer import File
+from wakapi_anyide.helpers.filediffer import human_to_bytes
 from wakapi_anyide.helpers.filediffer import process_file_change
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers.types import Event
@@ -29,11 +30,10 @@ def bytes_to_human(size: int):
             return f"{(size / (1024**i)):.2f} {suffix}"
     
     return f"{(size / 1024**6):.2f} PiB"
-    
 
-def format_file(file: File):
-    color = "red" if file.too_large else "bright_black"
-    extra = "  [yellow]Large file[/yellow]" if file.too_large else ""
+def format_file(file: File, max_size: int=0):
+    color = "red" if file.too_large(max_size) else "bright_black"
+    extra = "  [yellow]Large file[/yellow]" if file.too_large(max_size) else ""
     return(f"{file.path}  [{color}]{bytes_to_human(file.size)}[/{color}]{extra}")
 
 
@@ -56,7 +56,8 @@ class FileWatcher(Watcher):
         
     async def _task(self, queue: Queue[Event]):
         excluded_pathspecs = self.env.project.files.exclude.copy()
-    
+        max_size = human_to_bytes(self.env.project.files.large_file_threshold)
+            
         for file in self.env.project.files.exclude_files:
             async with open(file, 'r') as file:
                 excluded_pathspecs.extend(await file.readlines())
@@ -75,10 +76,14 @@ class FileWatcher(Watcher):
             if excluded_paths.match_file(resolved_path):
                 continue
             
-            file = await File.read(resolved_path)
+            try:
+                file = await File.read(resolved_path, max_size)
+            except Exception as e:
+                logger.error(e)
+                continue
             
             self.cache[resolved_path] = file
-            logger.info(f"  {format_file(file)}")
+            logger.info(f"  {format_file(file, max_size)}")
     
         logger.info("Watching!")
     
@@ -94,7 +99,7 @@ class FileWatcher(Watcher):
                     new_file = File.empty(resolved_path)
                 else:
                     try:
-                        new_file = await File.read(resolved_path)
+                        new_file = await File.read(resolved_path, max_size)
                     except OSError as e:
                         if not Path(resolved_path).is_dir():
                             logger.warning(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
@@ -102,7 +107,7 @@ class FileWatcher(Watcher):
                         continue
                 
                 if self.cache.get(resolved_path) is None:
-                    logger.info(f"New file found: {format_file(new_file)} ")
+                    logger.info(f"New file found: {format_file(new_file, max_size)} ")
                     self.cache[resolved_path] = File.empty(resolved_path)
                 
                 if self.current_file is None:
@@ -143,7 +148,6 @@ class FileWatcher(Watcher):
             
             if event is not None:
                 yield event
-            
             
             self.cache[self.current_file.path] = self.current_file
             self.current_file = None
