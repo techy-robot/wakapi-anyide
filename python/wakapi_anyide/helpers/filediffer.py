@@ -17,37 +17,68 @@ SIZE_MAX = 2**16
 @dataclass
 class File:
     path: str
-    body: bytes
+    linecount: int
     size: int
+    checksum: str
+    binary: bool
+    body: bytes
     
     @property
-    def too_large(self):
-        return self.size > SIZE_MAX
+    def too_large(self, env_max_size: int):
+        return self.size > env_max_size
     
     @classmethod
     async def read(cls, path: str):
         size = await getsize(path)
         
-        if size > SIZE_MAX:
+        #  Reads the file contents and returns the important metadata on it, but no content
+        
+        async with open(path, 'rb') as file:
+            line_count = 0
+            size = await getsize(path)
+            
+            # TODO: Check if binary too large according to user settings, and skip reading and calculate. 
+            filebytes: bytes = await file.read()
+            checksum = sha256(filebytes).hexdigest()
+            binary = False
+            """ def _count_generator(reader):
+                b = reader(1024 * 1024)
+                while b:
+                    yield b
+                    b = reader(1024 * 1024) """
+            try:
+                # we might want to support any encoding type in the future. This will suffice though just to detect an error
+                
+                # Read line count without loading the file into memory
+                # c_generator = _count_generator(file.raw.read)
+                # count each \n
+                # line = sum(buffer.count(b'\n') for buffer in c_generator) +1
+                
+                                
+                filedecoded = filebytes.decode()
+                filelines = filedecoded.splitlines()
+                line_count = len(filelines)
+                
+            except UnicodeDecodeError:
+                line_count = (size) / 100 # Read file size in bytes instead of line count. Estimate 100 bytes a line
+                binary = True
+                
             return cls(
                 path,
-                b"",
-                size
+                line_count,
+                size,
+                checksum,
+                binary
             )
-        else:
-            async with open(path, 'rb') as file:
-                return cls(
-                    path,
-                    await file.read(),
-                    size
-                )
     
     @classmethod
     def empty(cls, path: str):
         return cls(
             path,
-            b"",
-            0
+            0,
+            0,
+            "",
+            b""
         )
 
 
