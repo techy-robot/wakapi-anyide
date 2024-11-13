@@ -172,7 +172,7 @@ def human_to_bytes(size: str) -> int:
         if size.endswith(suffix):
             
             # Splitting text and number in string
-            res = re.findall(r'(\d+)(\w+?)', size)[0]
+            res = re.findall(r'(\d+)\s*(\w+?)', size)[0]
             number = res[0]
             return int(number) * (1024**(i+1))
     raise ValueError("Invalid size format")
