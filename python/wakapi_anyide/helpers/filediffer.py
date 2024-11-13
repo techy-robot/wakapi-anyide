@@ -23,7 +23,7 @@ class File:
     body: bytes
     
 
-    def too_large(self, max_size: int=0):
+    def too_large(self, max_size: int=65536):
         return self.size > max_size
     
     # reads through the file as chunks, to be iterated over
@@ -69,7 +69,7 @@ class File:
         return file_hash.hexdigest()
     
     @classmethod
-    async def read(cls, path: str, max_size: int=0):
+    async def read(cls, path: str, max_size: int=65536):
         """
         Reads a file from the given path and returns a File object encapsulating its metadata.
 
@@ -103,7 +103,7 @@ class File:
             
             # TODO: Improve efficiency by reading the file only once, not 3 times for content, checksum, and lines.
             
-            filebytes: bytes = None
+            filebytes: bytes = b""
             binary = False
             
             # if the file is small enough, read it all into memory

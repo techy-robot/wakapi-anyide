@@ -57,7 +57,7 @@ class FileWatcher(Watcher):
     async def _task(self, queue: Queue[Event]):
         excluded_pathspecs = self.env.project.files.exclude.copy()
         max_size = human_to_bytes(self.env.project.files.large_file_threshold)
-    
+            
         for file in self.env.project.files.exclude_files:
             async with open(file, 'r') as file:
                 excluded_pathspecs.extend(await file.readlines())
@@ -77,7 +77,7 @@ class FileWatcher(Watcher):
                 continue
             
             try:
-                file = await File.read(resolved_path)
+                file = await File.read(resolved_path, max_size)
             except Exception as e:
                 logger.error(e)
                 continue
@@ -99,7 +99,7 @@ class FileWatcher(Watcher):
                     new_file = File.empty(resolved_path)
                 else:
                     try:
-                        new_file = await File.read(resolved_path)
+                        new_file = await File.read(resolved_path, max_size)
                     except OSError as e:
                         if not Path(resolved_path).is_dir():
                             logger.warning(f"Failed to open a file: {e} (maybe it was deleted very quickly)")
