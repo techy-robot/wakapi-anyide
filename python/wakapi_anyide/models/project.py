@@ -18,6 +18,7 @@ class ProjectFiles(BaseModel):
     exclude_files: List[str]
     exclude_binary_files: bool = True
     language_mapping: dict = {}
+    editor_mapping: dict = {}
 
 
 class ProjectDescription(BaseModel):

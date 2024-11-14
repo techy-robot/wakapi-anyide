@@ -31,6 +31,7 @@ exclude = {exclude}  # files to exclude in tracking
 exclude_files = {exclude_files}  # files whose contents will be used to exclude other files from tracking
 exclude_binary_files = true  # whether to ignore binary files
 # language_mapping = {{".kicad_sch" = "Kicad Schematic"}} # custom language mapping
+# editor_mapping = {{".kicad_sch" = "Kicad Schematic Editor"}} # same as above, except specify the editor. The dashboard does not have the abilty to rename editors based on file extension, only on the original name
 
 [project]
 name = "{name}"  # your project name

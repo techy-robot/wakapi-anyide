@@ -46,7 +46,7 @@ These instructions are best run in an existing project.
   exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
   exclude_binary_files = true  # whether to ignore binary files
   # language_mapping = {".kicad_sch" = "Kicad Schematic"}  # custom language mapping
-  
+  # editor_mapping = {".kicad_sch" = "Kicad Schematic Editor"} # same as above, except specify the editor. The dashboard does not have the abilty to rename editors based on file extension, only on the original name
   [project]
   name = "test2"  # your project name
   ```
@@ -63,11 +63,12 @@ These instructions are best run in an existing project.
 wakapi-anyide tells the WakaTime server:
 
 - your OS and that you are using wakapi-anyide (`wakatime/unset (Linux-none-none) wakapi-anyide-wakatime/unset`)
-- an anonymised hostname based off of your computer's name (`anonymised machine 749f8c4e`)
+- your editor (if specified), default is wakapi-anyide
+- an anonymised hostname based off of your computer's name (`anonymised machine 749f8c4e`), or specified hostname
 - the relative path of the files you change (`./wakatime_anyide/__init__.py`)
 - the estimated time you have spent
 - your estimated cursor position over time
-- the estimated language of any files you edit (`py`, `Makefile`)
+- the estimated or specified language of any files you edit (`py`, `Makefile`)
 - the amount of lines changed
 - the branch you are editing if you use Git
 - any information you specified in the project section of `wak.toml`
@@ -118,6 +119,7 @@ Not supported.
 
 wakapi-anyide is not integrated with your editor. It can only guess what you are doing through file changes.
 As such, it may sometimes pick up generated files.
+A useful feature of wakapi-anyide is that you can specify what editor and what language you are working on, based on the file extension.
 
 ### Binary files
 
