@@ -56,6 +56,7 @@ class FileWatcher(Watcher):
         
     async def _task(self, queue: Queue[Event]):
         excluded_pathspecs = self.env.project.files.exclude.copy()
+        excluded_pathspecs.append(".*/")
     
         for file in self.env.project.files.exclude_files:
             async with open(file, 'r') as file:
