@@ -119,6 +119,8 @@ Not supported.
 wakapi-anyide is not integrated with your editor. It can only guess what you are doing through file changes.
 As such, it may sometimes pick up generated files.
 
+By default, any directory beginning with `.` will be untracked. You cannot change this.
+
 ### Binary files
 
 wakapi-anyide can track binary files with `files.exclude_binary_files = false`.
