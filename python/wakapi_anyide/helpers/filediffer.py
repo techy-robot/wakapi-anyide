@@ -1,6 +1,5 @@
 import difflib
 import logging
-import random
 import re
 from dataclasses import dataclass
 from hashlib import sha256
@@ -14,6 +13,7 @@ from wakapi_anyide.watchers.types import Event
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class File:
     path: str
@@ -22,36 +22,37 @@ class File:
     checksum: str
     binary: bool
     body: bytes
-    max_size: int=65536
-    
+    max_size: int = 65536
+
     @property
     def too_large(self):
         return self.size > self.max_size
-    
+
     # reads through the file as chunks, to be iterated over
-    async def _block_generator(filechunks, size=256*256):
+    async def _block_generator(filechunks, size=256 * 256):
         """
         Reads the file in chunks of size `size`, and yields each chunk.
         Use this generator to iterate over the file in chunks without loading the whole file into memory.
         """
-        
+
         while True:
             b = await filechunks.read(size)
             if not b:
                 break
             yield b
+
     async def _count(cls, file):
         """
         Count the number of newlines in a file, without loading the whole file into memory.
         """
-        
+
         count = 0
-        await file.seek(0)# reset file after potentially reading the first time
+        await file.seek(0)  # reset file after potentially reading the first time
         # count each \n
         async for bl in cls._block_generator(file):
             count += bl.count(b"\n")
         return count
-    
+
     async def calculate_checksum(file):
         """
         Reads the file in chunks and calculates its SHA256 checksum.
@@ -63,13 +64,13 @@ class File:
             A hex string representing the checksum of the file content.
         """
         # At some point I might want to support calling this function in the main program.
-        
-        await file.seek(0)# reset file after potentially reading the first time
+
+        await file.seek(0)  # reset file after potentially reading the first time
         file_hash = sha256()
         while chunk := await file.read(8192):
             file_hash.update(chunk)
         return file_hash.hexdigest()
-    
+
     @classmethod
     async def read(self, path: str):
         """
@@ -96,64 +97,49 @@ class File:
             File: An instance of the File class containing the metadata of the file.
         """
         size = await getsize(path)
-        
+
         #  Reads the file contents and returns the important metadata on it, but no content
-        
-        async with open(path, 'rb') as file:
+
+        async with open(path, "rb") as file:
             line_count = 0
             size = await getsize(path)
-            
+
             # TODO: Improve efficiency by reading the file only once, not 3 times for content, checksum, and lines.
-            
+
             filebytes: bytes = b""
             binary = False
-            
+
             # if the file is small enough, read it all into memory
             if size <= self.max_size:
                 filebytes: bytes = await file.read()
-            
+
             # We can't be sure that the file will be read above, so we need to check if it is binary separately and calculate the line count
             try:
                 # test the first 512 bytes to see if it can be decoded as text
                 await file.seek(0)
                 filedecoded = await file.read(512)
                 filedecoded = filedecoded.decode()
-                
+
                 # Read line count without loading the wholefile into memory
-                line_count = await self._count(self, file) 
-                            
+                line_count = await self._count(self, file)
+
             except UnicodeDecodeError:
-                line_count = size # Read file size in bytes instead of line count.
-                binary = True 
-            
+                line_count = size  # Read file size in bytes instead of line count.
+                binary = True
+
             # Calculate checksum without loading the wholefile into memory
             checksum = await self.calculate_checksum(file)
-              
-                
+
             return self(
-                path,
-                line_count,
-                size,
-                checksum,
-                binary,
-                filebytes,
-                self.max_size
+                path, line_count, size, checksum, binary, filebytes, self.max_size
             )
-    
+
     @classmethod
     def empty(self, path: str):
         """
         Create a File object that represents an empty file.
         """
-        return self(
-            path,
-            0,
-            0,
-            "",
-            False,
-            b"",
-            self.max_size
-        )
+        return self(path, 0, 0, "", False, b"", self.max_size)
 
 
 def index_to_linecol(file: str, index: int):
@@ -161,7 +147,7 @@ def index_to_linecol(file: str, index: int):
     col = 0
 
     for character in file[:index]:
-        if character == '\n':
+        if character == "\n":
             line += 1
             col = 0
         else:
@@ -173,19 +159,20 @@ def index_to_linecol(file: str, index: int):
 def human_to_bytes(size: str) -> int:
     for i, suffix in enumerate(["KiB", "MiB", "GiB", "TiB"]):
         if size.endswith(suffix):
-            
             # Splitting text and number in string
-            res = re.findall(r'(\d+)\s*(\w+?)', size)[0]
+            res = re.findall(r"(\d+)\s*(\w+?)", size)[0]
             number = res[0]
-            return int(number) * (1024**(i+1))
+            return int(number) * (1024 ** (i + 1))
     raise ValueError("Invalid size format")
 
 
-def process_file_change(new_file: File, old_file: File, time: float, env: Environment) -> Event | None:
+def process_file_change(
+    new_file: File, old_file: File, time: float, env: Environment
+) -> Event | None:
     filename = new_file.path
     file_extension = Path(new_file.path).suffix
-    max_size = human_to_bytes(env.project.files.large_file_threshold)
-    
+    human_to_bytes(env.project.files.large_file_threshold)
+
     if new_file.too_large or old_file.too_large:
         diff = new_file.linecount - old_file.linecount
         lines_added = max(0, diff)
@@ -194,32 +181,34 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
         if diff == 0 and new_file.checksum != old_file.checksum:
             lines_added = None
             lines_removed = None
-            
+
         return Event(
-            filename=f"{filename}#wakapi-anyide-toolarge", # specify that this file is handled differently. Shows up on dashboard
+            filename=f"{filename}#wakapi-anyide-toolarge",  # specify that this file is handled differently. Shows up on dashboard
             file_extension=file_extension,
             cursor=(0, 0),
             lines_added=lines_added,
             lines_removed=lines_removed,
             lines=new_file.linecount,
-            time=time
+            time=time,
         )
-    
+
     # Both files are text files
     if not new_file.binary and not old_file.binary:
         new_file_str = new_file.body.decode()
         old_file_str = old_file.body.decode()
         last_index = 0
         # finding rough cursor postion
-        for op in difflib.SequenceMatcher(a=old_file_str, b=new_file_str, autojunk=False).get_opcodes():
+        for op in difflib.SequenceMatcher(
+            a=old_file_str, b=new_file_str, autojunk=False
+        ).get_opcodes():
             match op:
-                case ('replace', _, _, _, j2):
+                case ("replace", _, _, _, j2):
                     last_index = max(last_index, j2)
-                case ('delete', i1, _, _, _):
+                case ("delete", i1, _, _, _):
                     last_index = max(last_index, i1)
-                case ('insert', i1, _, j1, j2):
+                case ("insert", i1, _, j1, j2):
                     last_index = max(last_index, j2)
-                case ('equal', _, _, _, _):
+                case ("equal", _, _, _, _):
                     pass
                 case _:
                     raise Exception(f"Unknown opcode {op}")
@@ -228,16 +217,18 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
         added_lines = 0
         deleted_lines = 0
         # finding changed lines
-        for op in difflib.SequenceMatcher(a=old_file_str.splitlines(), b=new_file_lines, autojunk=False).get_opcodes():
+        for op in difflib.SequenceMatcher(
+            a=old_file_str.splitlines(), b=new_file_lines, autojunk=False
+        ).get_opcodes():
             match op:
-                case ('replace', i1, i2, j1, j2):
+                case ("replace", i1, i2, j1, j2):
                     added_lines += j2 - j1
                     deleted_lines += i2 - i1
-                case ('delete', i1, i2, _, _):
+                case ("delete", i1, i2, _, _):
                     deleted_lines += i2 - i1
-                case ('insert', _, _, j1, j2):
+                case ("insert", _, _, j1, j2):
                     added_lines += j2 - j1
-                case ('equal', _, _, _, _):
+                case ("equal", _, _, _, _):
                     pass
                 case _:
                     raise Exception(f"Unknown opcode {op}")
@@ -251,7 +242,7 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
             lines_added=added_lines,
             lines_removed=deleted_lines,
             lines=new_file.linecount,
-            time=time
+            time=time,
         )
     else:  # One of the files is binary
         if env.project.files.exclude_binary_files:
@@ -261,29 +252,31 @@ def process_file_change(new_file: File, old_file: File, time: float, env: Enviro
         added_lines = 0
         deleted_lines = 0
         last_index = 0
-        for op in difflib.SequenceMatcher(a=old_file.body, b=new_file.body, autojunk=False).get_opcodes():
+        for op in difflib.SequenceMatcher(
+            a=old_file.body, b=new_file.body, autojunk=False
+        ).get_opcodes():
             match op:
-                case ('replace', i1, i2, j1, j2):
+                case ("replace", i1, i2, j1, j2):
                     added_lines += j2 - j1
                     deleted_lines += i2 - i1
                     last_index = max(last_index, j2)
-                case ('delete', i1, i2, _, _):
+                case ("delete", i1, i2, _, _):
                     deleted_lines += i2 - i1
                     last_index = max(last_index, i1)
-                case ('insert', _, _, j1, j2):
+                case ("insert", _, _, j1, j2):
                     added_lines += j2 - j1
                     last_index = max(last_index, j2)
-                case ('equal', _, _, _, _):
+                case ("equal", _, _, _, _):
                     pass
                 case _:
                     raise Exception(f"Unknown opcode {op}")
 
         return Event(
-            filename=f"{filename}#wakapi-anyide-binaryfile", # specify that this file is a binary. Shows up on dashboard
-            file_extension=file_extension, 
+            filename=f"{filename}#wakapi-anyide-binaryfile",  # specify that this file is a binary. Shows up on dashboard
+            file_extension=file_extension,
             cursor=(1, last_index),
             lines_added=added_lines,
             lines_removed=deleted_lines,
             lines=new_file.linecount,
-            time=time
+            time=time,
         )

@@ -1,5 +1,3 @@
 from .filewatcher import FileWatcher
 
-WATCHERS = {
-    "files": FileWatcher
-}
+WATCHERS = {"files": FileWatcher}
