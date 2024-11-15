@@ -86,14 +86,14 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
             "category": "coding",
             "time": event.time,
             "project": env.project.project.name,
-            "language": language_processor(env, event.file_extension),
+            "language": env.project.files.language_mapping.get(event.file_extension, event.file_extension.replace(".", "")),
             "lines": event.lines,
             "line_additions": event.lines_added,
             "line_deletions": event.lines_removed,
             "lineno": event.cursor[0],
             "cursorpos": event.cursor[1],
             "is_write": True,
-            "editor": "wakapi-anyide",
+            "editor": env.project.files.editor_mapping.get(event.file_extension, "wakapi-anyide"),
             "machine": env.config.settings.hostname or f"anonymised machine {sha256(host.node.encode()).hexdigest()[:8]}",
             "operating_system": host.system,
             "user_agent": user_agent
@@ -119,15 +119,6 @@ async def heartbeat_task(env: Environment, queue: Queue[Event], watchers: Sequen
         else:
             raise Exception(f"Failed to send heartbeat: {response.status} {last_text}")
 
-
-def language_processor(env: Environment, file_extension: str) -> str:
-    languages = env.project.files.language_mapping
-
-    lang = languages.get(file_extension)  # If the suffix matches a defined one in the languages table
-    if lang is None:
-        return file_extension.replace(".", "")  # If it didn't find a match, return the suffix only
-    return lang
-    
     
 async def run(env: Environment):
     ev = asyncio.get_event_loop()
