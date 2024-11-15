@@ -39,6 +39,7 @@ jobs:
           git diff --exit-code
   
   linux:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -74,6 +75,7 @@ jobs:
           path: dist
 
   windows:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -101,6 +103,7 @@ jobs:
           path: dist
 
   macos:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -127,6 +130,7 @@ jobs:
           path: dist
 
   sdist:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
