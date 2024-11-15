@@ -19,6 +19,7 @@ class ProjectFiles(BaseModel):
     exclude_binary_files: bool = True
     language_mapping: dict = {}
     editor_mapping: dict = {}
+    large_file_threshold: str = "64KiB"
 
 
 class ProjectDescription(BaseModel):

@@ -46,9 +46,11 @@ These instructions are best run in an existing project.
   exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
   exclude_binary_files = true  # whether to ignore binary files
   # language_mapping = {".kicad_sch" = "Kicad Schematic"}  # custom language mapping
-  # editor_mapping = {".kicad_sch" = "Kicad Schematic Editor"} # same as above, except specify the editor. The dashboard does not have the abilty to rename editors based on file extension, only on the original name
+  # editor_mapping = {".kicad_sch" = "Kicad Schematic Editor"} # custom editor mapping
+  large_file_threshold = "64KiB" # files larger than this will not do precise line diffing, it will only count total lines. 
+
   [project]
-  name = "test2"  # your project name
+  name = "PROJECT NAME"  # your project name
   ```
 
 - Run `wakapi-anyide test` in the same directory you have `wak.toml` in.
@@ -70,7 +72,7 @@ wakapi-anyide tells the WakaTime server:
 - your estimated cursor position over time
 - the estimated or specified language of any files you edit (`py`, `Makefile`)
 - the amount of lines changed
-- the branch you are editing if you use Git
+- the branch you are editing if you use Git (WIP)
 - any information you specified in the project section of `wak.toml`
 
 Additionally, the WakaTime server will be able to see:
@@ -127,8 +129,8 @@ wakapi-anyide can track binary files with `files.exclude_binary_files = false`.
 File changes are reported specially:
 - they are appended with `#wakapi-anyide-binary` in tracking
 - cursor position is set to the last change in the binary file
-- the line count are set to the binary diff count
+- the line count is set to the binary diff count unless the file is larger than the threshold
 
-### Large files
+### Large or numerous files
 
-For performance reasons, files which are larger than 64 KiB will only report changes in filesize.
+For performance reasons, files which are larger than the specified threshold (default is 64KiB) will only report changes in *total* file line count or file size in bytes if its binary. It does not know the number of lines that are modified, but it can tell that the file changed based on checksum. This will still be fine for High Seas, since only the total line count matters. If you have thousands of files it is recommended to set the threshold to 0, because every specified file in your project is stored in RAM.
