@@ -34,7 +34,7 @@ These instructions are best run in an existing project.
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.6.6
+  # https://github.com/iamawatermelo/wakapi-anyide v0.6.7
   
   [meta]
   version = 1
@@ -118,6 +118,8 @@ Not supported.
 
 wakapi-anyide is not integrated with your editor. It can only guess what you are doing through file changes.
 As such, it may sometimes pick up generated files.
+
+By default, any directory beginning with `.` will be untracked. You cannot change this.
 
 ### Binary files
 
