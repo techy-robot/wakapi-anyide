@@ -1,8 +1,13 @@
 # wakapi-anyide
+
 Log your coding time against any WakaTime-like server.
 
 > [!NOTE]
 > Teenager? Check out [High Seas](https://highseas.hackclub.com/)!
+
+## I need help!
+
+If you're in the Hack Club Slack, please ask me (Sarah / sharajarajsarahs) for help with using wakapi-anyide with High Seas. Otherwise, open a GitHub issue.
 
 > [!IMPORTANT]
 > wakapi-anyide is still in development.
@@ -22,7 +27,7 @@ These instructions are best run in an existing project.
 - **Set your IDE to autosave as quickly as possible.**
   This is how wakapi-anyide is able to track your coding time. Ideally, something like a second, so it saves as you type.
   However, anything under your editor timeout preference in your WakaTime settings is fine.
-  For High Seas, it **must** be under two minutes.
+  For High Seas, your IDE **must** save at least every two minutes.
 
 - Install `wakapi-anyide` with your favourite Python package manager (try `pipx install wakapi-anyide[color]` to install with colour support!)
 
