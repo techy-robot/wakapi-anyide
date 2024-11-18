@@ -8,7 +8,7 @@ name: CI
 on:
   push:
     branches:
-      - witch
+      - '*'
     tags:
       - '*'
   pull_request:
@@ -31,13 +31,14 @@ jobs:
           hatch build
           pip install dist/*.whl
           wakapi-anyide --help
-      - name: Ensure imports are formatted correctly
+      - name: Check formatting
         run: |
-          hatch run pip install reorder-python-imports==3.14.0
-          hatch run reorder-python-imports --application-directories=python/ --py312-plus python/wakapi_anyide/**/*.py --exit-zero-even-if-changed
-          git diff --exit-code
+          pip install ruff
+          ruff format --target-version py312
+          ruff check --target-version py312
   
   linux:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -73,6 +74,7 @@ jobs:
           path: dist
 
   windows:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -100,6 +102,7 @@ jobs:
           path: dist
 
   macos:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
@@ -126,6 +129,7 @@ jobs:
           path: dist
 
   sdist:
+    if: ${{ startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

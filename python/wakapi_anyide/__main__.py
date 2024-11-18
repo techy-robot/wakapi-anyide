@@ -11,7 +11,6 @@ from wakapi_anyide import __version__
 from wakapi_anyide.models.config import WakatimeConfig
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.models.project import Project
-from wakapi_anyide.runner import ConfigInvalidatedException
 from wakapi_anyide.runner import run
 
 logger = logging.getLogger(__name__)
@@ -31,6 +30,7 @@ exclude = {exclude}  # files to exclude in tracking
 exclude_files = {exclude_files}  # files whose contents will be used to exclude other files from tracking
 exclude_binary_files = true  # whether to ignore binary files
 # language_mapping = {{".kicad_sch" = "Kicad Schematic"}} # custom language mapping
+# editor_mapping = {{".kicad_sch" = "Kicad Schematic Editor"}} # custom editor mapping
 large_file_threshold = "64KiB" # files larger than this will not do precise line diffing, it will only count total lines. 
 # It is recommended to set the threshold to 0 for thousands of files, because they are all stored in RAM
 
@@ -45,7 +45,7 @@ app = typer.Typer(
 try:
     from rich.highlighter import Highlighter
     from rich.text import Text
-    
+
     class NoHighlights(Highlighter):
         def highlight(self, text: Text) -> None:
             pass
@@ -56,19 +56,28 @@ except ImportError:
 def setup_logging(is_verbose: bool):
     try:
         from rich.logging import RichHandler
+
         logging.basicConfig(
             level="DEBUG" if is_verbose else "INFO",
             format="[bold magenta]{module}[/bold magenta][bright_black]:{funcName}@{lineno:03}[/bright_black]  {message}",
-            style='{',
+            style="{",
             datefmt="[%X]",
-            handlers=[RichHandler(highlighter=NoHighlights(), rich_tracebacks=True, markup=True, show_time=False, show_path=False)]
+            handlers=[
+                RichHandler(
+                    highlighter=NoHighlights(),
+                    rich_tracebacks=True,
+                    markup=True,
+                    show_time=False,
+                    show_path=False,
+                )
+            ],
         )
     except ImportError:
         logging.basicConfig(
             level="DEBUG" if is_verbose else "INFO",
             format="{levelname} {filename}:{funcName}@{lineno:03} {message}",
-            style='{',
-            datefmt="[%X]"
+            style="{",
+            datefmt="[%X]",
         )
         logger.warning("Rich is not available, using basic logging (pip install rich?)")
 
@@ -77,11 +86,15 @@ Verbose: TypeAlias = Annotated[bool, typer.Option("--verbose", callback=setup_lo
 
 
 def start(is_test):
-    asyncio.run(run(Environment(
-        is_test_only=is_test,
-        config=WakatimeConfig(),  # type: ignore
-        project=Project()  # type: ignore
-    )))
+    asyncio.run(
+        run(
+            Environment(
+                is_test_only=is_test,
+                config=WakatimeConfig(),  # type: ignore
+                project=Project(),  # type: ignore
+            )
+        )
+    )
 
 
 @app.command()
@@ -98,10 +111,17 @@ def track(verbose: Verbose = False):
 def version():
     print(f"wakapi-anyide v{__version__}")
 
+
 def prompt(prompt, default: str | None = None):
     try:
         from rich import get_console
-        return get_console().input(f"[bold magenta]{prompt}[/bold magenta] [cyan](default {default})[/cyan]\n[bright_cyan]>>> [bright_cyan]") or default
+
+        return (
+            get_console().input(
+                f"[bold magenta]{prompt}[/bold magenta] [cyan](default {default})[/cyan]\n[bright_cyan]>>> [bright_cyan]"
+            )
+            or default
+        )
     except ImportError:
         return input(f"{prompt}\n>>> ") or default
 
@@ -109,13 +129,16 @@ def prompt(prompt, default: str | None = None):
 def prompt_choices(prompt, choices, default):
     try:
         from rich import get_console
-        response = get_console().input(f"[bold magenta]{prompt} {repr(choices)}[/bold magenta] [cyan](default {default})[/cyan]\n[bright_cyan]>>> [bright_cyan]")
+
+        response = get_console().input(
+            f"[bold magenta]{prompt} {repr(choices)}[/bold magenta] [cyan](default {default})[/cyan]\n[bright_cyan]>>> [bright_cyan]"
+        )
     except ImportError:
         response = input(f"{prompt} {repr(choices)} (default {default})\n>>> ")
-    
+
     if response == "":
         return default
-    
+
     if response in choices:
         return response
     else:
@@ -124,19 +147,22 @@ def prompt_choices(prompt, choices, default):
 
 def prompt_yn(prompt, default: bool):
     prompt_str = "[Y/n]" if default else "[y/N]"
-    
+
     try:
         from rich import get_console
-        response = get_console().input(f"[bold magenta]{prompt}[/bold magenta] [cyan]\\{prompt_str}: [cyan]")
+
+        response = get_console().input(
+            f"[bold magenta]{prompt}[/bold magenta] [cyan]\\{prompt_str}: [cyan]"
+        )
     except ImportError:
         response = input(f"{prompt} {prompt_str}: ")
-        
+
     if response == "":
         return default
-    
+
     if response.lower() not in ("y", "n"):
         raise ValueError("expected y or n")
-    
+
     return response.lower() == "y"
 
 
@@ -145,42 +171,52 @@ def setup():
     output = Path("wak.toml")
     if output.exists():
         raise Exception("a wak.toml already exists in this directory")
-        
-    project_type = prompt_choices("What kind of project do you have?", ["files"], "files")
-        
-    project_name = prompt("What's your project name?", default=Path("./").absolute().name)
-    
+
+    # prompt_choices("What kind of project do you have?", ["files"], "files")
+
+    project_name = prompt(
+        "What's your project name?", default=Path("./").absolute().name
+    )
+
     included_paths = list()
     if prompt_yn("Would you like to watch all files in the directory?", True):
         included_paths.append("*")
     elif prompt_yn("Would you like to add include paths?", True):
         while True:
-            included_paths.append(prompt("Please enter a path to include in gitignore format (e.g /src)"))
-            
+            included_paths.append(
+                prompt("Please enter a path to include in gitignore format (e.g /src)")
+            )
+
             if not prompt_yn("Would you like to add another include path?", True):
                 break
-    
+
     excluded_paths = list()
     if prompt_yn("Would you like to add exclude paths?", False):
         while True:
-            excluded_paths.append(prompt("Please enter a path to exclude in gitignore format (e.g /node_modules)"))
-            
+            excluded_paths.append(
+                prompt(
+                    "Please enter a path to exclude in gitignore format (e.g /node_modules)"
+                )
+            )
+
             if not prompt_yn("Would you like to add another exclude path?", False):
                 break
-    
+
     exclude_files = []
     for file in DEFAULT_IGNOREFILES:
         if Path(file).exists():
             exclude_files.append(file)
-    
-    with open(output, 'w') as file:
-        file.write(TEMPLATE.format(
-            version=__version__,
-            include=dumps(included_paths),
-            exclude=dumps(excluded_paths),
-            exclude_files=dumps(exclude_files),
-            name=project_name
-        ).strip())
+
+    with open(output, "w") as file:
+        file.write(
+            TEMPLATE.format(
+                version=__version__,
+                include=dumps(included_paths),
+                exclude=dumps(excluded_paths),
+                exclude_files=dumps(exclude_files),
+                name=project_name,
+            ).strip()
+        )
 
 
 if __name__ == "__main__":
