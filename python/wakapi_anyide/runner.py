@@ -96,9 +96,8 @@ async def heartbeat_task(
                 )
         
         user_agent = (
-            f"{editor}/unset wakapi-anyide-wakatime/" + __version__
+            f"wakatime/unset ({host.system}-{host.release}) wakapi-anyide/{__version__} {editor.replace(' ', '_')}-wakatime/unset"
         )
-        logger.info(f"User agent: {user_agent}")
 
         heartbeats = [
             {
