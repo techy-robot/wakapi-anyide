@@ -213,7 +213,7 @@ def autosave_masking(new_file: File, old_file: File, env: Environment, cache: Di
                 
                 # Check if the autosave file is in the cache already, this means that the autosave has been modified multiple times and the user potentially hasn't saved yet
                 try:
-                    autosave_file_cache = cache[new_file.path]
+                    old_file = cache[new_file.path]
 
                     # The filename is set to the original filename, but other than that, the autosave file is treated the same as normal files.
                     new_file.path = filename
@@ -232,7 +232,7 @@ def autosave_masking(new_file: File, old_file: File, env: Environment, cache: Di
 
     # if there are multiple matches for the same file, print an error message
     if count > 1:
-        logger.info(f"Warning: Multiple autosave pattern matches for the same file: {current_file.path}. Skipping file")
+        logger.info(f"Warning: Multiple autosave pattern matches for the same file: {new_file.path}. Skipping file")
         return None, None
         
     return new_file, old_file
