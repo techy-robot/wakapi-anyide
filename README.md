@@ -51,9 +51,11 @@ These instructions are best run in an existing project.
   exclude_files = [".gitignore"]  # files whose contents will be used to exclude other files from tracking
   exclude_binary_files = true  # whether to ignore binary files
   # language_mapping = {".kicad_sch" = "Kicad Schematic"}  # custom language mapping
-  
+  # editor_mapping = {".kicad_sch" = "Kicad Schematic Editor"} # custom editor mapping
+  large_file_threshold = "64KiB" # files larger than this will not do precise line diffing, it will only count total lines. 
+
   [project]
-  name = "test2"  # your project name
+  name = "PROJECT NAME"  # your project name
   ```
 
 - Run `wakapi-anyide test` in the same directory you have `wak.toml` in.
@@ -68,13 +70,14 @@ These instructions are best run in an existing project.
 wakapi-anyide tells the WakaTime server:
 
 - your OS and that you are using wakapi-anyide (`wakatime/unset (Linux-none-none) wakapi-anyide-wakatime/unset`)
-- an anonymised hostname based off of your computer's name (`anonymised machine 749f8c4e`)
+- your editor (if specified), default is wakapi-anyide
+- an anonymised hostname based off of your computer's name (`anonymised machine 749f8c4e`), or specified hostname
 - the relative path of the files you change (`./wakatime_anyide/__init__.py`)
 - the estimated time you have spent
 - your estimated cursor position over time
-- the estimated language of any files you edit (`py`, `Makefile`)
+- the estimated or specified language of any files you edit (`py`, `Makefile`)
 - the amount of lines changed
-- the branch you are editing if you use Git
+- the branch you are editing if you use Git (WIP)
 - any information you specified in the project section of `wak.toml`
 
 Additionally, the WakaTime server will be able to see:
@@ -123,6 +126,7 @@ Not supported.
 
 wakapi-anyide is not integrated with your editor. It can only guess what you are doing through file changes.
 As such, it may sometimes pick up generated files.
+A useful feature of wakapi-anyide is that you can specify what editor and what language you are working on, based on the file extension.
 
 By default, any directory beginning with `.` will be untracked. You cannot change this.
 
@@ -132,8 +136,8 @@ wakapi-anyide can track binary files with `files.exclude_binary_files = false`.
 File changes are reported specially:
 - they are appended with `#wakapi-anyide-binary` in tracking
 - cursor position is set to the last change in the binary file
-- the line count are set to the binary diff count
+- the line count is set to the binary diff count unless the file is larger than the threshold
 
-### Large files
+### Large or numerous files
 
-For performance reasons, files which are larger than 64 KiB will only report changes in filesize.
+For performance reasons, files which are larger than the specified threshold (default is 64KiB) will only report changes in *total* file line count or file size in bytes if its binary. It does not know the number of lines that are modified, but it can tell that the file changed based on checksum. This will still be fine for High Seas, since only the total line count matters. If you have thousands of files it is recommended to set the threshold to 0, because every specified file in your project is stored in RAM.
