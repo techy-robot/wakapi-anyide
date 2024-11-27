@@ -41,34 +41,40 @@ name = "{name}"  # your project name
 # Note that not all feilds have to be filled, they will default to their types' empty status
 PROJECT_PRESETS = {
     "kicad" : {
-        "include": ["*.kicad_pcb", "*.kicad_sch"],
+        "include": ["*.kicad_pcb", "*.kicad_pcb-bak", "*.kicad_sch", "*.kicad_sch-bak"],
         "exclude": ["*.zip", "*fp-info-cache", "*#auto_saved_files#"],
-        "language_mapping": {".kicad_sch": "Kicad Schematic", ".kicad_pcb": "Kicad PCB"},
-        "editor_mapping": {".kicad_sch": "Kicad Schematic Editor", ".kicad_pcb": "Kicad PCB Editor"}
+        "language_mapping": {".kicad_sch": "KiCAD Schematic", ".kicad_pcb": "KiCAD PCB"},
+        "editor_mapping": {".kicad_sch": "kicad", ".kicad_pcb": "kicad"}
     },
     "cpp" : {
         "include": ["*.cpp", "*.h"],
-        "exclude": ["*.so", "*.a", "*.pyd", "*.pyc", "*.log", "*.log.*"],
+        "exclude": ["*.so", "*.dll", "*.lib",  "*.o", "*.log", "*.log.*", "*.exe", "*.out", "*.d"],
     },
     "python" : {
         "include": ["*.py"],
-        "exclude": ["*.whl", "*.gz"],   
+        "exclude": ["*.whl", "*.gz", "*.pyd", "*.pyc"],   
     },
     "rust" : {
         "include": ["*.rs"],
-        "exclude": ["Cargo.lock", "*target*", "*.d" "*.so"],
+        "exclude": ["Cargo.lock", "*target*", "target/", "debug/", "**/*.rs.bk"],
     },
     "go" : {
-        "include": ["*.go"],  
+        "include": ["*.go"], 
+        "exclude": ["*.mod", "*.go.sum", "*.so", "*.dll", "*.lib",  "*.o", "*.log", "*.log.*", "*.a"],
     },
     "c" : {
         "include": ["*.c", "*.h"],
-        "exclude": ["*.so", "*.a", "*.pyd", "*.pyc", "*.log", "*.log.*"],
+        "exclude": ["*.so", "*.dll", "*.lib",  "*.o", "*.log", "*.log.*", "*.exe", "*.out", "*.d"],
     },
     "blender" : {
         "include": ["*.blend"],
         "language_mapping": {".blend": "Blender"},
-        "editor_mapping": {".blend": "Blender"}
+        "editor_mapping": {".blend": "blender"}
+    },
+    "freecad" : {
+        "include": ["*.FCStd", "*.FCBak"],
+        "language_mapping": {".FCStd": "FreeCAD"},
+        "editor_mapping": {".FCStd": "freecad"}
     },
     "manual" : {
         "include": ["*"],
