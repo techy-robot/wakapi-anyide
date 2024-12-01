@@ -67,7 +67,7 @@ These instructions are best run in an existing project.
 
 Before doing anything else, ensure you're on the latest version of wakapi-anyide.
 You can find out your current version by running `wakapi-anyide version`.
-For pipx, run `pipx install --force 'wakapi-anyide[color]'
+For pipx, run `pipx install --force 'wakapi-anyide[color]'`
 
 ### macOS
 
