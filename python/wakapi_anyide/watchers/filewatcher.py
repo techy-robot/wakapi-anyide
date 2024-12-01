@@ -65,7 +65,7 @@ class FileWatcher(Watcher):
         included_paths = PathSpec.from_lines('gitwildmatch', self.env.project.files.include)
         excluded_paths = PathSpec.from_lines('gitwildmatch', excluded_pathspecs)
     
-        watch = Watch()
+        watch = Watch(self.env.polling_mode)
         watch.add_watch("./", True)
         
         logger.info("Watched files:")

@@ -7,5 +7,6 @@ from wakapi_anyide.models.project import Project
 @dataclass
 class Environment:
     is_test_only: bool
+    polling_mode: bool
     config: WakatimeConfig
     project: Project

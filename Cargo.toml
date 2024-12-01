@@ -7,9 +7,11 @@ edition = "2021"
 name = "wakapi_anyide"
 crate-type = ["cdylib"]
 
-[dependencies]
-notify = "7.0.0"
-
 [dependencies.pyo3]
 version = "0.22.5"
 features = ["abi3-py312", "extension-module"]
+
+[dependencies.notify]
+version = "7.0.0"
+default-features = false
+features = ["macos_kqueue"]
