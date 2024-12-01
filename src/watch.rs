@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
 use std::sync::Mutex;
 use std::thread;
+use std::time::Duration;
 
 #[pyclass(eq, eq_int)]
 #[derive(PartialEq, Debug, Clone)]
@@ -111,9 +112,11 @@ impl Watch {
     #[new]
     fn new<'py>(poll: bool) -> PyResult<Self> {
         let (tx, rx) = channel::<NotifyResult<Event>>();
+        let config = Config::default()
+            .with_poll_interval(Duration::from_secs(10));
         let watcher: Box<dyn Watcher + Send> = match poll {
-            false => Box::new(recommended_watcher(tx).map_err(|e| PyOSError::new_err(format!("failed to watch: {e}")))?),
-            true => Box::new(PollWatcher::new(tx, Config::default()).map_err(|e| PyOSError::new_err(format!("failed to watch: {e}")))?)
+            false => Box::new(RecommendedWatcher::new(tx, config).map_err(|e| PyOSError::new_err(format!("failed to watch: {e}")))?),
+            true => Box::new(PollWatcher::new(tx, config).map_err(|e| PyOSError::new_err(format!("failed to watch: {e}")))?)
         };
         
         Ok(Self {

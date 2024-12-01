@@ -39,7 +39,7 @@ These instructions are best run in an existing project.
 
 - Inspect and edit the generated `wak.toml`:
   ```toml
-  # https://github.com/iamawatermelo/wakapi-anyide v0.6.7
+  # https://github.com/iamawatermelo/wakapi-anyide v0.6.8
   
   [meta]
   version = 1
@@ -62,6 +62,20 @@ These instructions are best run in an existing project.
 
 - Run `wakapi-anyide track` to actually track your progress.
   You must run this every time.
+
+## Troubleshooting
+
+Before doing anything else, ensure you're on the latest version of wakapi-anyide.
+You can find out your current version by running `wakapi-anyide version`.
+For pipx, run `pipx install --force 'wakapi-anyide[color]'
+
+### macOS
+
+The program may fail to watch all files because of macOS' low open file limits. Try:
+```sh
+ulimit -n 12288
+wakapi-anyide track
+```
 
 ## What wakapi-anyide sends
 
