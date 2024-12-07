@@ -15,6 +15,7 @@ from typing import Dict
 from aiohttp import ClientResponse
 from aiohttp import request
 
+from wakapi_anyide import __version__
 from wakapi_anyide.models.environment import Environment
 from wakapi_anyide.watchers import WATCHERS
 from wakapi_anyide.watchers.types import Event
@@ -90,8 +91,12 @@ async def heartbeat_task(
             )
 
         host = uname()
+        editor = env.project.files.editor_mapping.get(
+                    event.file_extension, "wakapi-anyide"
+                )
+        
         user_agent = (
-            f"wakatime/unset ({host.system}-none-none) wakapi-anyide-wakatime/unset"
+            f"wakatime/unset ({host.system}-{host.release}) wakapi-anyide/{__version__} {editor.replace(' ', '_')}-wakatime/unset"
         )
 
         heartbeats = [
@@ -110,9 +115,7 @@ async def heartbeat_task(
                 "lineno": event.cursor[0],
                 "cursorpos": event.cursor[1],
                 "is_write": True,
-                "editor": env.project.files.editor_mapping.get(
-                    event.file_extension, "wakapi-anyide"
-                ),
+                "editor": editor,
                 "machine": env.config.settings.hostname
                 or f"anonymised machine {sha256(host.node.encode()).hexdigest()[:8]}",
                 "operating_system": host.system,
