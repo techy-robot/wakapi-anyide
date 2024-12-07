@@ -29,14 +29,57 @@ include = {include}  # files to include in tracking
 exclude = {exclude}  # files to exclude in tracking
 exclude_files = {exclude_files}  # files whose contents will be used to exclude other files from tracking
 exclude_binary_files = true  # whether to ignore binary files
-# language_mapping = {{".kicad_sch" = "Kicad Schematic"}} # custom language mapping
-# editor_mapping = {{".kicad_sch" = "Kicad Schematic Editor"}} # custom editor mapping
+language_mapping = {language_mapping} # custom language mapping
+editor_mapping = {editor_mapping} # custom editor mapping
 large_file_threshold = "64KiB" # files larger than this will not do precise line diffing, it will only count total lines. 
 # It is recommended to set the threshold to 0 for thousands of files, because they are all stored in RAM
 
 [project]
 name = "{name}"  # your project name
 """
+
+# Note that not all feilds have to be filled, they will default to their types' empty status
+PROJECT_PRESETS = {
+    "kicad" : {
+        "include": ["*.kicad_pcb", "*.kicad_pcb-bak", "*.kicad_sch", "*.kicad_sch-bak"],
+        "exclude": ["*.zip", "*fp-info-cache", "*#auto_saved_files#"],
+        "language_mapping": {".kicad_sch": "KiCAD Schematic", ".kicad_pcb": "KiCAD PCB"},
+        "editor_mapping": {".kicad_sch": "kicad", ".kicad_pcb": "kicad"}
+    },
+    "cpp" : {
+        "include": ["*.cpp", "*.h"],
+        "exclude": ["*.so", "*.dll", "*.lib",  "*.o", "*.log", "*.log.*", "*.exe", "*.out", "*.d"],
+    },
+    "python" : {
+        "include": ["*.py"],
+        "exclude": ["*.whl", "*.gz", "*.pyd", "*.pyc"],   
+    },
+    "rust" : {
+        "include": ["*.rs"],
+        "exclude": ["Cargo.lock", "*target*", "target/", "debug/", "**/*.rs.bk"],
+    },
+    "go" : {
+        "include": ["*.go"], 
+        "exclude": ["*.mod", "*.go.sum", "*.so", "*.dll", "*.lib",  "*.o", "*.log", "*.log.*", "*.a"],
+    },
+    "c" : {
+        "include": ["*.c", "*.h"],
+        "exclude": ["*.so", "*.dll", "*.lib",  "*.o", "*.log", "*.log.*", "*.exe", "*.out", "*.d"],
+    },
+    "blender" : {
+        "include": ["*.blend"],
+        "language_mapping": {".blend": "Blender"},
+        "editor_mapping": {".blend": "blender"}
+    },
+    "freecad" : {
+        "include": ["*.FCStd", "*.FCBak"],
+        "language_mapping": {".FCStd": "FreeCAD"},
+        "editor_mapping": {".FCStd": "freecad"}
+    },
+    "manual" : {
+        "include": ["*"],
+    }
+}
 
 app = typer.Typer(
     pretty_exceptions_enable=False  # they don't report asyncio taskgroup exceptions correctly
@@ -172,35 +215,65 @@ def setup():
     if output.exists():
         raise Exception("a wak.toml already exists in this directory")
 
-    # prompt_choices("What kind of project do you have?", ["files"], "files")
+    included_paths = list()
+    excluded_paths = list()
+    exclude_files = list()
+    language_mapping = dict()
+    editor_mapping = dict()
 
     project_name = prompt(
         "What's your project name?", default=Path("./").absolute().name
     )
-
-    included_paths = list()
-    if prompt_yn("Would you like to watch all files in the directory?", True):
-        included_paths.append("*")
-    elif prompt_yn("Would you like to add include paths?", True):
-        while True:
-            included_paths.append(
-                prompt("Please enter a path to include in gitignore format (e.g /src)")
-            )
-
-            if not prompt_yn("Would you like to add another include path?", True):
-                break
-
-    excluded_paths = list()
-    if prompt_yn("Would you like to add exclude paths?", False):
-        while True:
-            excluded_paths.append(
-                prompt(
-                    "Please enter a path to exclude in gitignore format (e.g /node_modules)"
+    choice = prompt_choices("Would you like to use one of these presets? If not, enter 'manual'", list(PROJECT_PRESETS.keys()), "manual")
+    if choice != "manual":
+        project = PROJECT_PRESETS[choice]
+        included_paths = project.get("include", [])
+        excluded_paths = project.get("exclude", [])
+        exclude_files = project.get("exclude_files", [])
+        language_mapping = project.get("language_mapping", {})
+        editor_mapping = project.get("editor_mapping", {})
+    
+    else: 
+        
+        if prompt_yn("Would you like to watch all files in the directory?", True):
+            included_paths.append("*")
+        elif prompt_yn("Would you like to add include paths?", True):
+            while True:
+                included_paths.append(
+                    prompt("Please enter a path to include in gitignore format (e.g /src)")
                 )
-            )
 
-            if not prompt_yn("Would you like to add another exclude path?", False):
-                break
+                if not prompt_yn("Would you like to add another include path?", True):
+                    break
+
+        if prompt_yn("Would you like to add exclude paths?", False):
+            while True:
+                excluded_paths.append(
+                    prompt(
+                        "Please enter a path to exclude in gitignore format (e.g /node_modules)"
+                    )
+                )
+
+                if not prompt_yn("Would you like to add another exclude path?", False):
+                    break
+                
+        if prompt_yn("Would you like to add custom language mappings?", False):
+            while True:
+                language = prompt("Please enter a language (e.g Python)")
+                mapping = prompt("Please enter a file extension (e.g .py)")
+                language_mapping[language] = mapping
+
+                if not prompt_yn("Would you like to add another language mapping?", False):
+                    break
+                
+        if prompt_yn("Would you like to add custom editor mappings?", False):
+            while True:
+                editor = prompt("Please enter an editor (e.g wakapi-anyide)")
+                mapping = prompt("Please enter a file extension (e.g .py)")
+                editor_mapping[editor] = mapping
+
+                if not prompt_yn("Would you like to add another editor mapping?", False):
+                    break
 
     exclude_files = []
     for file in DEFAULT_IGNOREFILES:
@@ -214,6 +287,8 @@ def setup():
                 include=dumps(included_paths),
                 exclude=dumps(excluded_paths),
                 exclude_files=dumps(exclude_files),
+                language_mapping=dumps(language_mapping).replace(":", " ="),
+                editor_mapping=dumps(editor_mapping).replace(":", " ="),
                 name=project_name,
             ).strip()
         )
