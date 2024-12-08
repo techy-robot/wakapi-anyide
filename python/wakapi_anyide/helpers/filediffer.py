@@ -200,7 +200,7 @@ def autosave_masking(new_file: File, old_file: File, env: Environment, cache: Di
                 filename = "".join(match.groups()) + extension
             except TypeError:
                 # If there are no groups, skip this iteration. Improper regex
-                logger.info(f"Invalid regex {settings['regex']}")
+                logger.warning(f"Invalid regex {settings['regex']}")
                 continue
             
             # If the folder in the settings is contained in the current file path, remove it, because we are only concerned with relative paths in the original folder
@@ -227,12 +227,12 @@ def autosave_masking(new_file: File, old_file: File, env: Environment, cache: Di
                     
             # Not a file in the cache. Perhaps we matched a file that's not an autosave, or the original file was deleted
             except KeyError: 
-                logger.info(f"Warning: Autosave pattern matches an original file that doesn't appear to be an autosave: {filename}. Skipping file")
+                logger.warning(f"Autosave pattern matches an original file that doesn't appear to be an autosave: {filename}. Skipping file")
                 return None, None
 
     # if there are multiple matches for the same file, print an error message
     if count > 1:
-        logger.info(f"Warning: Multiple autosave pattern matches for the same file: {new_file.path}. Skipping file")
+        logger.warning(f"Multiple autosave pattern matches for the same file: {new_file.path}. Skipping file")
         return None, None
         
     return new_file, old_file
