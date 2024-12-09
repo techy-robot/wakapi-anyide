@@ -72,24 +72,26 @@ def setup_logging(is_verbose: bool):
 
 
 Verbose: TypeAlias = Annotated[bool, typer.Option("--verbose", callback=setup_logging)]
+Polling: TypeAlias = Annotated[bool, typer.Option("--filewatcher-use-polling")]
 
 
-def start(is_test):
+def start(is_test, is_polling):
     asyncio.run(run(Environment(
         is_test_only=is_test,
+        polling_mode=is_polling,
         config=WakatimeConfig(),  # type: ignore
         project=Project()  # type: ignore
     )))
 
 
 @app.command()
-def test(verbose: Verbose = False):
-    start(True)
+def test(verbose: Verbose = False, polling: Polling = False):
+    start(True, polling)
 
 
 @app.command()
-def track(verbose: Verbose = False):
-    start(False)
+def track(verbose: Verbose = False, polling: Polling = False):
+    start(False, polling)
 
 
 @app.command()

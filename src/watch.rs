@@ -1,7 +1,6 @@
 use notify::event::{ModifyKind, RenameMode};
 use notify::{
-    recommended_watcher, Event, EventKind, RecommendedWatcher, RecursiveMode,
-    Result as NotifyResult, Watcher,
+    recommended_watcher, Config, Event, EventKind, PollWatcher, RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher
 };
 use pyo3::exceptions::*;
 use pyo3::prelude::*;
@@ -10,6 +9,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
 use std::sync::Mutex;
 use std::thread;
+use std::time::Duration;
 
 #[pyclass(eq, eq_int)]
 #[derive(PartialEq, Debug, Clone)]
@@ -103,20 +103,24 @@ impl WatchEvent {
 
 #[pyclass(frozen)]
 pub struct Watch {
-    watcher: Mutex<RecommendedWatcher>,
+    watcher: Mutex<Box<dyn Watcher + Send>>,
     rx: Mutex<RefCell<Option<Receiver<NotifyResult<Event>>>>>,
 }
 
 #[pymethods]
 impl Watch {
     #[new]
-    fn new<'py>() -> PyResult<Self> {
+    fn new<'py>(poll: bool) -> PyResult<Self> {
         let (tx, rx) = channel::<NotifyResult<Event>>();
+        let config = Config::default()
+            .with_poll_interval(Duration::from_secs(10));
+        let watcher: Box<dyn Watcher + Send> = match poll {
+            false => Box::new(RecommendedWatcher::new(tx, config).map_err(|e| PyOSError::new_err(format!("failed to watch: {e}")))?),
+            true => Box::new(PollWatcher::new(tx, config).map_err(|e| PyOSError::new_err(format!("failed to watch: {e}")))?)
+        };
+        
         Ok(Self {
-            watcher: Mutex::new(
-                recommended_watcher(tx)
-                    .map_err(|e| PyOSError::new_err(format!("failed to watch: {e}")))?,
-            ),
+            watcher: Mutex::new(watcher),
             rx: Mutex::new(RefCell::new(Some(rx))),
         })
     }
